@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowRight, Play, Volume2 } from "lucide-react"
+import { ArrowRight, Headphones, Mic, Play, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
@@ -34,12 +34,15 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login">
-                <Button variant="ghost" className="text-white hover:text-[#ff6700]">
+                <Button variant="ghost" className="text-white hover:text-[#ff6700] transition-transform duration-300 transform hover:scale-105">
                   Login
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button className="bg-[#ff6700] hover:bg-[#cc5300] text-white">Sign Up</Button>
+                <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105">
+                  <span className="relative z-10">Sign Up</span>
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                </Button>
               </Link>
             </div>
           </nav>
@@ -55,16 +58,9 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/signup">
-                  <Button className="bg-[#ff6700] hover:bg-[#cc5300] text-white px-8 py-6 text-lg">
-                    Get Started <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="/demo">
-                  <Button
-                    variant="outline"
-                    className="border-[#ff6700] text-white hover:bg-[#331a00] px-8 py-6 text-lg"
-                  >
-                    Try Demo <Play className="ml-2 h-5 w-5" />
+                  <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-8 py-6 text-lg transition-transform duration-300 transform group hover:scale-105">
+                    <span className="relative z-10">Start Now</span>
+                    <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                   </Button>
                 </Link>
               </div>
@@ -75,75 +71,118 @@ export default function LandingPage() {
 
 
 
-      {/* Features Section */}
-      <div className="bg-[#0f0f0f] py-20">
+      {/* Features + CTA Combined Section */}
+      <div className="bg-gradient-to-b from-black via-black to-[#ff6700]/20 py-20">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16">
-            Why <span className="text-[#ff6700]">PhonkItUp</span>?
-          </h2>
+          <div className="text-center">
+            <motion.h2 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="text-4xl font-bold mb-6"
+            >
+              Ready to <span className="text-[#ff6700]">Phonk It Up</span>?
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-xl text-gray-300 max-w-2xl mx-auto mb-10"
+            >
+              Join thousands of phonk enthusiasts and start your journey into the world of phonk music today.
+            </motion.p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
+          {[
+            {
+                  icon: <Volume2 className="h-8 w-8 text-[#ff6700]" />,
+                  title: "Uninterrupted Listening",
+                  desc: "Keep the phsonk playing even when you switch tabs or minimize your browser.",
+                },
+                {
+                  icon: <Headphones className="h-8 w-8 text-[#ff6700]" />,
+                  title: "Exclusive Phonk Collection",
+                  desc: "Access the largest library of phonk music, from classics to underground gems.",
+                },
+                {
+                  icon: <Mic className="h-8 w-8 text-[#ff6700]" />,
+                  title: "Discover Artists",
+                  desc: "Find new phonk artists and tracks based on your listening preferences.",
+                },
+          ].map((feature, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 60, scale: 0.8 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{
+                duration: 0.8,
+                delay: i * 0.2,
+                type: "spring",
+                stiffness: 100,
+                damping: 20,
+              }}
+              whileHover={{
+                scale: 1.05,
+                y: -10,
+                transition: { duration: 0.3, ease: "easeOut" },
+              }}
+              viewport={{ once: true }}
+              className="relative overflow-hidden group cursor-pointer"
+            >
+              <div className="relative bg-gradient-to-br from-white/20 via-white/10 to-transparent backdrop-blur-xl p-8 rounded-2xl border border-white/20 shadow-2xl transition-all duration-500 group-hover:border-[#ff6700]/60 group-hover:shadow-[0_0_40px_rgba(255,103,0,0.3)]">
+                {/* Glassmorphism background overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#ff6700]/5 via-transparent to-black/20 rounded-2xl"></div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {[
-              {
-                icon: <Volume2 className="h-8 w-8 text-[#ff6700]" />,
-                title: "Uninterrupted Listening",
-                desc: "Keep the phonk playing even when you switch tabs or minimize your browser.",
-              },
-              {
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#ff6700]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                ),
-                title: "Exclusive Phonk Collection",
-                desc: "Access the largest library of phonk music, from classics to underground gems.",
-              },
-              {
-                icon: (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#ff6700]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                ),
-                title: "Discover Artists",
-                desc: "Find new phonk artists and tracks based on your listening preferences.",
-              },
-            ].map((feature, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: i * 0.2 }}
-                viewport={{ once: true }}
-                className="bg-black/50 p-8 rounded-xl border border-[#993f00]/30 hover:border-[#ff6700]/50 transition-all"
-              >
-                <div className="bg-[#993f00]/30 p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                  {feature.icon}
+                {/* Shine effect */}
+                <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform skew-x-[-20deg] group-hover:left-[100%] transition-all duration-1000 ease-out"></div>
+
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  <motion.div
+                    className="bg-gradient-to-br from-[#ff6700]/20 to-[#ff6700]/10 backdrop-blur-sm p-4 rounded-full w-16 h-16 flex items-center justify-center mb-6 border border-[#ff6700]/30 group-hover:scale-110 transition-transform duration-300"
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    {feature.icon}
+                  </motion.div>
+                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#ff6700] transition-colors duration-300">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-300 group-hover:text-gray-200 transition-colors duration-300">
+                    {feature.desc}
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-gray-400">{feature.desc}</p>
-              </motion.div>
-            ))}
+
+                {/* Animated border gradient */}
+                <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#ff6700] via-transparent to-[#ff6700] p-px">
+                    <div className="bg-black/80 backdrop-blur-xl rounded-2xl w-full h-full"></div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+              viewport={{ once: true }}
+            >
+              <Link href="/signup">
+                <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-8 py-6 text-lg transition-transform duration-300 transform group hover:scale-105">
+                  <span className="relative z-10">Create Free Account</span>
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                </Button>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>
 
 
-      {/* CTA Section */}
-      <div className="bg-black py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold mb-6">
-            Ready to <span className="text-[#ff6700]">Phonk It Up</span>?
-          </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10">
-            Join thousands of phonk enthusiasts and start your journey into the world of phonk music today.
-          </p>
-          <Link href="/signup">
-            <Button className="bg-[#ff6700] hover:bg-[#cc5300] text-white px-8 py-6 text-lg">
-              Create Free Account
-            </Button>
-          </Link>
-        </div>
-      </div>
 
       {/* Footer */}
       <footer className="bg-[#0f0f0f] py-10 border-t border-gray-800">
