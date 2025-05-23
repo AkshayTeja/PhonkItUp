@@ -98,7 +98,7 @@ export default function LandingPage() {
             {
                   icon: <Volume2 className="h-8 w-8 text-[#ff6700]" />,
                   title: "Uninterrupted Listening",
-                  desc: "Keep the phsonk playing even when you switch tabs or minimize your browser.",
+                  desc: "Keep the phonk playing even when you switch tabs or minimize your browser.",
                 },
                 {
                   icon: <Headphones className="h-8 w-8 text-[#ff6700]" />,
