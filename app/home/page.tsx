@@ -404,13 +404,13 @@ export default function HomePage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setLiked(!liked)}
-                className="ml-2 transition-colors duration-300"
+                className="ml-2 transition-colors duration-300 hover:bg-transparent"
               >
                 <Heart
                   className={`h-5 w-5 ${
                     liked ? "text-[#ff6700]" : "text-gray-400 hover:text-white"
                   }`}
-                  fill={liked ? "#ff6700" : "none"} // optional fill effect
+                  fill={liked ? "#ff6700" : "none"}
                 />
               </Button>
             </div>

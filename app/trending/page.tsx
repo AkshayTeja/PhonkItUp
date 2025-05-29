@@ -1,11 +1,17 @@
-import Image from "next/image"
-import Link from "next/link"
-import { Play, TrendingUp, FlameIcon as Fire, BarChart3, Calendar } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { NavigationBar } from "@/components/navigation-bar"
-import { MusicPlayer } from "@/components/music-player"
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Play,
+  TrendingUp,
+  FlameIcon as Fire,
+  BarChart3,
+  Calendar,
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { NavigationBar } from "@/components/navigation-bar";
+import { MusicPlayer } from "@/components/music-player";
 
 // Mock data for trending tracks
 const trendingTracks = [
@@ -99,7 +105,7 @@ const trendingTracks = [
     cover: "/placeholder.svg?height=80&width=80",
     change: "+11",
   },
-]
+];
 
 export default function TrendingPage() {
   return (
@@ -110,21 +116,30 @@ export default function TrendingPage() {
       {/* Main Content */}
       <div className="flex-1 container mx-auto px-4 py-8">
         <div className="flex items-center mb-8">
-          <TrendingUp className="h-8 w-8 text-purple-500 mr-3" />
+          <TrendingUp className="h-8 w-8 text-[#ff6700] mr-3" />
           <h1 className="text-3xl font-bold">What&apos;s Hot?</h1>
         </div>
 
         <Tabs defaultValue="trending" className="mb-10">
           <TabsList className="bg-gray-900 border border-gray-800">
-            <TabsTrigger value="trending" className="data-[state=active]:bg-purple-600">
+            <TabsTrigger
+              value="trending"
+              className="data-[state=active]:bg-[#ff6700]"
+            >
               <Fire className="mr-2 h-4 w-4" />
               Trending Now
             </TabsTrigger>
-            <TabsTrigger value="weekly" className="data-[state=active]:bg-purple-600">
+            <TabsTrigger
+              value="weekly"
+              className="data-[state=active]:bg-[#ff6700]"
+            >
               <Calendar className="mr-2 h-4 w-4" />
               This Week
             </TabsTrigger>
-            <TabsTrigger value="monthly" className="data-[state=active]:bg-purple-600">
+            <TabsTrigger
+              value="monthly"
+              className="data-[state=active]:bg-[#ff6700]"
+            >
               <BarChart3 className="mr-2 h-4 w-4" />
               This Month
             </TabsTrigger>
@@ -163,18 +178,26 @@ export default function TrendingPage() {
                       </div>
                       <div>
                         <div className="font-medium">{track.title}</div>
-                        <div className="text-sm text-gray-400 md:hidden">{track.artist}</div>
+                        <div className="text-sm text-gray-400 md:hidden">
+                          {track.artist}
+                        </div>
                       </div>
                     </div>
-                    <div className="col-span-2 hidden md:block text-gray-400">{track.artist}</div>
-                    <div className="col-span-2 hidden md:block text-gray-400">{track.plays}</div>
+                    <div className="col-span-2 hidden md:block text-gray-400">
+                      {track.artist}
+                    </div>
+                    <div className="col-span-2 hidden md:block text-gray-400">
+                      {track.plays}
+                    </div>
                     <div className="col-span-1 text-center">
                       <span className="inline-flex items-center text-green-500">
                         {track.change}
                         <TrendingUp className="ml-1 h-3 w-3" />
                       </span>
                     </div>
-                    <div className="col-span-1 text-right text-gray-400">{track.duration}</div>
+                    <div className="col-span-1 text-right text-gray-400">
+                      {track.duration}
+                    </div>
                   </div>
                 ))}
               </ScrollArea>
@@ -184,14 +207,18 @@ export default function TrendingPage() {
           <TabsContent value="weekly" className="mt-6">
             <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
               <h3 className="text-xl font-bold mb-2">Weekly Charts</h3>
-              <p className="text-gray-400">Check back to see the most popular tracks this week.</p>
+              <p className="text-gray-400">
+                Check back to see the most popular tracks this week.
+              </p>
             </div>
           </TabsContent>
 
           <TabsContent value="monthly" className="mt-6">
             <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
               <h3 className="text-xl font-bold mb-2">Monthly Charts</h3>
-              <p className="text-gray-400">Check back to see the most popular tracks this month.</p>
+              <p className="text-gray-400">
+                Check back to see the most popular tracks this month.
+              </p>
             </div>
           </TabsContent>
         </Tabs>
@@ -200,7 +227,10 @@ export default function TrendingPage() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">Trending Artists</h2>
-            <Link href="/artists" className="text-sm text-purple-400 hover:text-purple-300">
+            <Link
+              href="/artists"
+              className="text-sm text-[#ff6700] hover:text-[#cc5300]"
+            >
               View All
             </Link>
           </div>
@@ -211,7 +241,9 @@ export default function TrendingPage() {
                 <div className="bg-[#0f0f0f] rounded-xl p-4 text-center transition-transform group-hover:translate-y-[-5px]">
                   <div className="relative mx-auto w-24 h-24 mb-4">
                     <Avatar className="w-24 h-24">
-                      <AvatarImage src={`/placeholder.svg?height=120&width=120`} />
+                      <AvatarImage
+                        src={`/placeholder.svg?height=120&width=120`}
+                      />
                       <AvatarFallback>A</AvatarFallback>
                     </Avatar>
                     <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
@@ -230,5 +262,5 @@ export default function TrendingPage() {
       {/* Music Player Component would be here */}
       <MusicPlayer />
     </div>
-  )
+  );
 }
