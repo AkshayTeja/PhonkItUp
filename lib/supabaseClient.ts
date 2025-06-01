@@ -1,6 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://nlxyjszbkozxdnheznvk.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5seHlqc3pia296eGRuaGV6bnZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3OTM4MTYsImV4cCI6MjA2NDM2OTgxNn0.LcU29RenWKnAfCJSS0Q3RwtP5f-2URpM3XuYPJ0p2KQ'
+// Ensure these environment variables are set in your deployment environment
+// and locally via a .env file (which should be excluded from Git).
+// The 'NEXT_PUBLIC_' prefix is a convention for client-side accessible variables
+// in frameworks like Next.js. Adjust if your framework uses a different convention.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Basic validation to ensure keys are loaded
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Supabase URL or Anon Key is not defined in environment variables.');
+  // Depending on your application, you might want to throw an error or handle this more gracefully.
+  // For production, you should ensure these are always set during deployment.
+}
+
+export const supabase = createClient(supabaseUrl!, supabaseAnonKey!); // Use non-null assertion if you've handled the error case
