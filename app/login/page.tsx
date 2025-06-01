@@ -1,33 +1,44 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import Link from "next/link"
-import { ArrowLeft, Volume2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Volume2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { signInWithEmail } from "@/lib/auth"; // adjust if your auth.ts path is different
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
-    // Simulate login process
-    setTimeout(() => {
-      setIsLoading(false)
-      window.location.href = "/home"
-    }, 1500)
-  }
+    const { error } = await signInWithEmail(email, password);
+
+    if (error) {
+      setError(error.message);
+      setIsLoading(false);
+    } else {
+      router.push("/home");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <div className="container mx-auto px-4 py-6">
-        <Link href="/" className="inline-flex items-center text-gray-400 hover:text-white mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center text-gray-400 hover:text-white mb-8"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to home
         </Link>
@@ -39,7 +50,9 @@ export default function LoginPage() {
           </div>
 
           <div className="bg-[#0f0f0f] p-8 rounded-xl border border-gray-800">
-            <h1 className="text-2xl font-bold text-center mb-6">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-center mb-6">
+              Welcome back
+            </h1>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -50,13 +63,18 @@ export default function LoginPage() {
                   placeholder="Enter your email"
                   required
                   className="bg-black border-gray-700 focus:border-[#ff6700]"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" className="text-sm text-[#ff6700] hover:text-orange-300">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-[#ff6700] hover:text-orange-300"
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -66,8 +84,12 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   required
                   className="bg-black border-gray-700 focus:border-[#ff6700]"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <Button
                 type="submit"
@@ -89,6 +111,7 @@ export default function LoginPage() {
                 className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3"
               >
                 <span className="relative z-10 flex items-center space-x-2">
+                  {/* Google Icon */}
                   <svg
                     className="w-5 h-5"
                     viewBox="0 0 533.5 544.3"
@@ -119,7 +142,10 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center text-sm text-gray-400">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-[#ff6700] hover:text-orange-300">
+              <Link
+                href="/signup"
+                className="text-[#ff6700] hover:text-orange-300"
+              >
                 Sign up
               </Link>
             </div>
@@ -127,5 +153,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
