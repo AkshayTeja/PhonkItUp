@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { signInWithEmail } from "@/lib/auth"; // adjust if your auth.ts path is different
+import { signInWithEmail, signInWithGoogle } from "@/lib/auth";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +109,14 @@ export default function LoginPage() {
               <Button
                 variant="outline"
                 className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3"
+                onClick={async () => {
+                  setIsLoading(true);
+                  const { error } = await signInWithGoogle();
+                  if (error) {
+                    setError(error.message);
+                    setIsLoading(false);
+                  }
+                }}
               >
                 <span className="relative z-10 flex items-center space-x-2">
                   {/* Google Icon */}

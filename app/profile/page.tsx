@@ -1,3 +1,4 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { NavigationBar } from "@/components/navigation-bar";
 import { MusicPlayer } from "@/components/music-player";
+import { supabase } from "@/lib/supabaseClient";
 
 // Mock data for user's playlists
 const userPlaylists = [
@@ -84,6 +86,17 @@ const recentlyPlayed = [
 ];
 
 export default function ProfilePage() {
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error("Error logging out:", error.message);
+      }
+    } catch (error) {
+      console.error("Unexpected error during logout:", error);
+    }
+  };
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Navigation Bar Component would be here */}
@@ -117,26 +130,28 @@ export default function ProfilePage() {
           </div>
 
           <div className="absolute bottom-4 right-4 flex gap-2">
-            <Button
-              size="sm"
-              className="bg-[#ff6700] text-white hover:bg-[#cc5200]"
-            >
+            <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105">
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             </Button>
-            <Button
-              size="sm"
-              className="bg-[#ff6700] text-white hover:bg-[#cc5200]"
-            >
+            <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105">
               <Share2 className="mr-2 h-4 w-4" />
               Share
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             </Button>
-            <Button
-              size="sm"
-              className="bg-[#ff6700] text-white hover:bg-[#cc5200]"
-            >
+            <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105">
               <Settings className="h-4 w-4" />
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             </Button>
+            <Link
+              href="/login"
+              onClick={handleLogout}
+              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+            >
+              <span className="relative z-10 flex items-center">Logout</span>
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+            </Link>
           </div>
         </div>
 

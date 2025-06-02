@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { NavigationBar } from "@/components/navigation-bar";
 
 // Mock data for tracks
 const popularTracks = [
@@ -177,45 +178,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* Navigation */}
-      <div className="bg-[#0f0f0f] border-b border-gray-800 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-8 w-8 text-[#ff6700] mr-2" />
-              <span className="text-xl font-bold">PhonkItUp</span>
-            </div>
-
-            <div className="hidden md:flex items-center space-x-8">
-              <Link href="/home" className="flex items-center text-white">
-                <Home className="mr-2 h-4 w-4" />
-                Home
-              </Link>
-              <Link
-                href="/trending"
-                className="flex items-center text-gray-400 hover:text-white"
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                What&apos;s Hot?
-              </Link>
-              <Link
-                href="/profile"
-                className="flex items-center text-gray-400 hover:text-white"
-              >
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </Link>
-            </div>
-
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search tracks, artists..."
-                className="pl-8 bg-gray-900 border-gray-700"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <NavigationBar />
 
       {/* Main Content */}
       <div className="flex-1 container mx-auto px-4 py-8">

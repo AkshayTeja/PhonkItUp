@@ -17,3 +17,15 @@ export const signOut = async () => {
   const { error } = await supabase.auth.signOut()
   return error
 }
+
+// Google Sign-In
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`, // Or your custom redirect page
+    },
+  });
+  return { data, error };
+};
+

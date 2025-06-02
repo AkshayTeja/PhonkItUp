@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation"; // Import usePathname
 import { Volume2, Search, Home, User, TrendingUp, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function NavigationBar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const pathname = usePathname(); // Get the current path
+
+  // Helper function to determine active link classes
+  const getLinkClasses = (href: string) => {
+    const isActive = pathname === href;
+    return `flex items-center transition-colors ${
+      isActive ? "text-white font-bold" : "text-gray-400 hover:text-white"
+    }`;
+  };
+
+  // Helper function to determine active mobile link classes
+  const getMobileLinkClasses = (href: string) => {
+    const isActive = pathname === href;
+    return `flex items-center p-3 rounded-lg ${
+      isActive
+        ? "bg-gray-800 text-white font-bold"
+        : "hover:bg-gray-800 text-gray-400"
+    }`;
+  };
 
   return (
     <>
@@ -23,21 +43,18 @@ export function NavigationBar() {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/home" className="flex items-center text-white">
+              {/* Home Link */}
+              <Link href="/home" className={getLinkClasses("/home")}>
                 <Home className="mr-2 h-4 w-4" />
                 Home
               </Link>
-              <Link
-                href="/trending"
-                className="flex items-center text-gray-400 hover:text-white"
-              >
+              {/* What's Hot? Link */}
+              <Link href="/trending" className={getLinkClasses("/trending")}>
                 <TrendingUp className="mr-2 h-4 w-4" />
                 What&apos;s Hot?
               </Link>
-              <Link
-                href="/profile"
-                className="flex items-center text-gray-400 hover:text-white"
-              >
+              {/* Profile Link */}
+              <Link href="/profile" className={getLinkClasses("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </Link>
@@ -91,23 +108,26 @@ export function NavigationBar() {
 
                     <div className="flex-1 py-4">
                       <nav className="space-y-2 px-2">
+                        {/* Mobile Home Link */}
                         <Link
                           href="/home"
-                          className="flex items-center p-3 rounded-lg hover:bg-gray-800"
+                          className={getMobileLinkClasses("/home")}
                         >
                           <Home className="mr-3 h-5 w-5" />
                           Home
                         </Link>
+                        {/* Mobile What's Hot? Link */}
                         <Link
                           href="/trending"
-                          className="flex items-center p-3 rounded-lg hover:bg-gray-800"
+                          className={getMobileLinkClasses("/trending")}
                         >
                           <TrendingUp className="mr-3 h-5 w-5" />
                           What&apos;s Hot?
                         </Link>
+                        {/* Mobile Profile Link */}
                         <Link
                           href="/profile"
-                          className="flex items-center p-3 rounded-lg hover:bg-gray-800"
+                          className={getMobileLinkClasses("/profile")}
                         >
                           <User className="mr-3 h-5 w-5" />
                           Profile
