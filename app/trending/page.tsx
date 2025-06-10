@@ -3,21 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Play,
-  TrendingUp,
-  FlameIcon as Fire,
-  BarChart3,
-  Calendar,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Play, TrendingUp } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { NavigationBar } from "@/components/navigation-bar";
-import { MusicPlayer } from "@/components/music-player";
+import { usePlayer } from "../context/PlayerContext"; // Import player context
 import { supabase } from "@/lib/supabaseClient";
 
-// Define interfaces for proper typing
 interface Track {
   id: string | number;
   title: string;
@@ -38,11 +29,10 @@ interface Artist {
 }
 
 export default function TrendingPage() {
-  // State declarations with proper typing
-  const [singleTrack, setSingleTrack] = useState<Track | null>(null);
   const [trendingArtists, setTrendingArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<Track | null>(null);
+  const [topTracks, setTopTracks] = useState<Track[]>([]);
+  const { playTrack } = usePlayer(); // Use context to control player
 
   useEffect(() => {
     fetchData();
@@ -51,7 +41,7 @@ export default function TrendingPage() {
   const fetchData = async (): Promise<void> => {
     setLoading(true);
     try {
-      await Promise.all([fetchSingleTrack(), fetchTrendingArtists()]);
+      await Promise.all([fetchTopTracks(), fetchTrendingArtists()]);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -72,43 +62,38 @@ export default function TrendingPage() {
     return `${(popularity * 5).toFixed(0)}K`;
   };
 
-  const fetchSingleTrack = async (): Promise<void> => {
-    console.log("Fetching single track...");
+  const fetchTopTracks = async (): Promise<void> => {
     const { data, error } = await supabase
       .from("phonk_songs")
       .select("*")
       .order("song_popularity", { ascending: false })
-      .limit(1);
+      .limit(5);
 
     if (error) {
-      console.error("Error fetching single track:", error.message);
+      console.error("Error fetching top tracks:", error.message);
       return;
     }
 
-    console.log("Fetched data:", data);
+    if (data) {
+      const formattedTracks: Track[] = data.map(
+        (track: any, index: number) => ({
+          id: track.id,
+          title: track.song_name,
+          artist: track.song_artist,
+          duration: formatDuration(track.song_duration),
+          plays: formatPlays(track.song_popularity),
+          cover: track.album_cover_url || "/placeholder.svg?height=80&width=80",
+          change: `+${Math.floor(Math.random() * 20) + 1}`,
+          popularity: track.song_popularity,
+          track_url: track.track_url,
+        })
+      );
 
-    if (data && data.length > 0) {
-      const track = data[0];
-      const formattedTrack: Track = {
-        id: track.id,
-        title: track.song_name,
-        artist: track.song_artist,
-        duration: formatDuration(track.song_duration),
-        plays: formatPlays(track.song_popularity),
-        cover: track.album_cover_url || "/placeholder.svg?height=80&width=80",
-        change: `+${Math.floor(Math.random() * 20) + 1}`,
-        popularity: track.song_popularity,
-        track_url: track.track_url,
-      };
-      console.log("Formatted track:", formattedTrack);
-      setSingleTrack(formattedTrack);
-    } else {
-      console.log("No tracks found in database");
+      setTopTracks(formattedTracks);
     }
   };
 
   const fetchTrendingArtists = async (): Promise<void> => {
-    console.log("Fetching trending artists...");
     const { data, error } = await supabase
       .from("phonk_songs")
       .select("song_artist, song_popularity, album_cover_url")
@@ -118,8 +103,6 @@ export default function TrendingPage() {
       console.error("Error fetching trending artists:", error);
       return;
     }
-
-    console.log("Fetched artists data:", data);
 
     if (data) {
       const artistMap = new Map<string, Artist>();
@@ -139,30 +122,35 @@ export default function TrendingPage() {
       });
 
       const artists: Artist[] = Array.from(artistMap.values()).slice(0, 5);
-      console.log("Formatted artists:", artists);
       setTrendingArtists(artists);
     }
   };
 
   const handleTrackPlay = (track: Track): void => {
-    setCurrentlyPlaying(track);
-    console.log("Playing:", track);
+    // Validate track_url before playing
+    if (!track.track_url) {
+      console.error("Track URL is missing for:", track.title);
+      return;
+    }
+
+    console.log("Playing track:", track.title, "URL:", track.track_url);
+    playTrack(track); // Use context to play track
   };
 
-  const renderSingleTrack = () => {
+  const renderTopTracks = () => {
     if (loading) {
       return (
         <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6700] mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading track...</p>
+          <p className="text-gray-400">Loading tracks...</p>
         </div>
       );
     }
 
-    if (!singleTrack) {
+    if (!topTracks.length) {
       return (
         <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
-          <h3 className="text-xl font-bold mb-2">No Track Found</h3>
+          <h3 className="text-xl font-bold mb-2">No Tracks Found</h3>
           <p className="text-gray-400">
             Add some phonk beats to your database to see them here.
           </p>
@@ -180,51 +168,52 @@ export default function TrendingPage() {
           <div className="col-span-1 text-center">Trend</div>
           <div className="col-span-1 text-right">Duration</div>
         </div>
-        <div
-          className="grid grid-cols-12 items-center p-4 hover:bg-gray-800/30 cursor-pointer transition-colors"
-          onClick={() => handleTrackPlay(singleTrack)}
-        >
-          <div className="col-span-1 text-gray-400">1</div>
-          <div className="col-span-5 flex items-center">
-            <div className="relative group">
-              <Image
-                src={singleTrack.cover}
-                alt={singleTrack.title}
-                width={40}
-                height={40}
-                className="rounded mr-3"
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/placeholder.svg?height=40&width=40";
-                }}
-              />
-              <div className="absolute inset-0 bg-black/60 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Play className="h-4 w-4 text-white" />
+
+        {topTracks.map((track, index) => (
+          <div
+            key={track.id}
+            className="grid grid-cols-12 items-center p-4 hover:bg-gray-800/30 cursor-pointer transition-colors"
+            onClick={() => handleTrackPlay(track)}
+          >
+            <div className="col-span-1 text-gray-400">{index + 1}</div>
+            <div className="col-span-5 flex items-center">
+              <div className="relative group">
+                <Image
+                  src={track.cover}
+                  alt={track.title}
+                  width={40}
+                  height={40}
+                  className="rounded mr-3"
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/placeholder.svg?height=40&width=40";
+                  }}
+                />
+                <div className="absolute inset-0 bg-black/60 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Play className="h-4 w-4 text-white" />
+                </div>
+              </div>
+              <div>
+                <div className="font-medium">{track.title}</div>
+                <div className="text-sm text-gray-400 md:hidden">
+                  {track.artist}
+                </div>
               </div>
             </div>
-            <div>
-              <div className="font-medium">{singleTrack.title}</div>
-              <div className="text-sm text-gray-400 md:hidden">
-                {singleTrack.artist}
-              </div>
+            <div className="col-span-2 hidden md:block text-gray-400">
+              {track.artist}
+            </div>
+            <div className="col-span-2 hidden md:block text-gray-400">
+              {track.plays}
+            </div>
+            <div className="col-span-1 text-center text-green-500">
+              {track.change} <TrendingUp className="inline h-3 w-3 ml-1" />
+            </div>
+            <div className="col-span-1 text-right text-gray-400">
+              {track.duration}
             </div>
           </div>
-          <div className="col-span-2 hidden md:block text-gray-400">
-            {singleTrack.artist}
-          </div>
-          <div className="col-span-2 hidden md:block text-gray-400">
-            {singleTrack.plays}
-          </div>
-          <div className="col-span-1 text-center">
-            <span className="inline-flex items-center text-green-500">
-              {singleTrack.change}
-              <TrendingUp className="ml-1 h-3 w-3" />
-            </span>
-          </div>
-          <div className="col-span-1 text-right text-gray-400">
-            {singleTrack.duration}
-          </div>
-        </div>
+        ))}
       </div>
     );
   };
@@ -236,10 +225,10 @@ export default function TrendingPage() {
       <div className="flex-1 container mx-auto px-4 py-8">
         <div className="flex items-center mb-8">
           <TrendingUp className="h-8 w-8 text-[#ff6700] mr-3" />
-          <h1 className="text-3xl font-bold">Top Track</h1>
+          <h1 className="text-3xl font-bold">Top Tracks</h1>
         </div>
 
-        {renderSingleTrack()}
+        {renderTopTracks()}
 
         {/* Trending Artists */}
         <div>
@@ -277,12 +266,7 @@ export default function TrendingPage() {
                   <div className="bg-[#0f0f0f] rounded-xl p-4 text-center transition-transform group-hover:translate-y-[-5px]">
                     <div className="relative mx-auto w-24 h-24 mb-4">
                       <Avatar className="w-24 h-24">
-                        <AvatarImage
-                          src={
-                            artist.cover ||
-                            "/placeholder.svg?height=120&width=120"
-                          }
-                        />
+                        <AvatarImage src={artist.cover || "/placeholder.svg"} />
                         <AvatarFallback>
                           {artist.name?.charAt(0) || "A"}
                         </AvatarFallback>
@@ -311,8 +295,6 @@ export default function TrendingPage() {
           )}
         </div>
       </div>
-
-      <MusicPlayer />
     </div>
   );
 }

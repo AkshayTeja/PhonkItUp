@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -14,68 +13,52 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Home, TrendingUp, Search, User } from "lucide-react";
 import Link from "next/link";
+import { usePlayer } from "../app/context/PlayerContext";
+
+interface Track {
+  id: string | number;
+  title: string;
+  artist: string;
+  duration: string;
+  plays: string;
+  cover: string;
+  change: string;
+  popularity: number;
+  track_url: string;
+}
+
+const defaultTrack = {
+  title: "No Track Selected",
+  artist: "Unknown Artist",
+  cover: "/placeholder.svg?height=80&width=80",
+};
 
 export function MusicPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(100);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const {
+    currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    liked,
+    isLoading,
+    error,
+    togglePlay,
+    skipForward,
+    skipBackward,
+    setCurrentTime,
+    setVolume,
+    toggleLike,
+  } = usePlayer();
 
-  // Mock current track data
-  const currentTrack = {
-    title: "Midnight Drift",
-    artist: "SHADXWBXRN",
-    cover: "/placeholder.svg?height=80&width=80",
-  };
-
-  // Initialize audio
-  useEffect(() => {
-    audioRef.current = new Audio("/placeholder.mp3");
-
-    audioRef.current.addEventListener("timeupdate", () => {
-      if (audioRef.current) {
-        setCurrentTime(audioRef.current.currentTime);
-      }
-    });
-
-    audioRef.current.addEventListener("loadedmetadata", () => {
-      if (audioRef.current) {
-        setDuration(audioRef.current.duration);
-      }
-    });
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = "";
-      }
-    };
-  }, []);
-
-  const togglePlay = () => {
-    if (isPlaying) {
-      audioRef.current?.pause();
-    } else {
-      audioRef.current?.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
+  const track = currentTrack || defaultTrack;
 
   const formatTime = (time: number) => {
+    if (!time || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
-
-  const handleTimeChange = (value: number[]) => {
-    const newTime = value[0];
-    setCurrentTime(newTime);
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
-    }
-  };
-
-  const [liked, setLiked] = useState(false);
 
   return (
     <>
@@ -117,31 +100,47 @@ export function MusicPlayer() {
             {/* Track Info */}
             <div className="flex items-center flex-1">
               <Image
-                src={currentTrack.cover || "/placeholder.svg"}
-                alt={currentTrack.title}
+                src={track.cover || "/placeholder.svg"}
+                alt={track.title}
                 width={48}
                 height={48}
                 className="rounded mr-3 hidden sm:block"
+                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/placeholder.svg?height=48&width=48";
+                }}
               />
-              <div>
-                <div className="font-medium truncate">{currentTrack.title}</div>
-                <div className="text-sm text-gray-400">
-                  {currentTrack.artist}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 font-medium truncate">
+                  <span className="text-white">
+                    {track.title}
+                    <div className="text-sm text-gray-400 truncate -mt-1 leading-snug">
+                      {track.artist}
+                    </div>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleLike}
+                    className="p-0 transition-colors duration-300 hover:bg-transparent"
+                  >
+                    <Heart
+                      className={`h-5 w-5 ${
+                        liked
+                          ? "text-[#ff6700]"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                      fill={liked ? "#ff6700" : "none"}
+                    />
+                  </Button>
+                  {isLoading && (
+                    <span className="text-[#ff6700] text-sm">Loading...</span>
+                  )}
+                  {error && (
+                    <span className="text-red-500 text-xs ml-2">{error}</span>
+                  )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLiked(!liked)}
-                className="ml-2 transition-colors duration-300 hover:bg-transparent"
-              >
-                <Heart
-                  className={`h-5 w-5 ${
-                    liked ? "text-[#ff6700]" : "text-gray-400 hover:text-white"
-                  }`}
-                  fill={liked ? "#ff6700" : "none"}
-                />
-              </Button>
             </div>
 
             {/* Controls */}
@@ -150,15 +149,22 @@ export function MusicPlayer() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-gray-400 hover:text-white"
+                  onClick={skipBackward}
+                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!currentTrack || isLoading}
                 >
-                  <SkipBack className="h-5 w-5" />
+                  <SkipBack className="h-5 w-5 text-white" />
                 </Button>
                 <Button
                   onClick={togglePlay}
-                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center"
+                  disabled={
+                    !currentTrack || !currentTrack.track_url || isLoading
+                  }
+                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isPlaying ? (
+                  {isLoading ? (
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : isPlaying ? (
                     <Pause className="h-4 w-4" />
                   ) : (
                     <Play className="h-4 w-4" />
@@ -167,24 +173,27 @@ export function MusicPlayer() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-gray-400 hover:text-white"
+                  onClick={skipForward}
+                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!currentTrack || isLoading}
                 >
-                  <SkipForward className="h-5 w-5" />
+                  <SkipForward className="h-5 w-5 text-white" />
                 </Button>
               </div>
 
               <div className="w-full hidden sm:flex items-center gap-2">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(currentTime)}
                 </span>
                 <Slider
                   value={[currentTime]}
                   max={duration || 100}
                   step={1}
-                  className="flex-1"
-                  onValueChange={handleTimeChange}
+                  className="flex-1 [&>div]:bg-[#ff6700] [&>div>div]:bg-[#ff6700]"
+                  onValueChange={(value) => setCurrentTime(value[0])}
+                  disabled={!currentTrack || isLoading}
                 />
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(duration)}
                 </span>
               </div>
@@ -193,7 +202,13 @@ export function MusicPlayer() {
             {/* Volume */}
             <div className="hidden md:flex items-center gap-2 flex-1 justify-end">
               <Volume2 className="h-5 w-5 text-gray-400" />
-              <Slider defaultValue={[70]} max={100} step={1} className="w-24" />
+              <Slider
+                value={[volume]}
+                max={100}
+                step={1}
+                className="w-24 [&>div]:bg-[#ff6700] [&>div>div]:bg-[#ff6700]"
+                onValueChange={(value) => setVolume(value[0])}
+              />
             </div>
           </div>
         </div>
