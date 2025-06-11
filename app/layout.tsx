@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Play } from "next/font/google";
 import { PlayerProvider } from "../app/context/PlayerContext";
-import { MusicPlayer } from "../components/music-player";
-import { MobileNav } from "../components/mobile-nav";
+import { ClientLayoutWrapper } from "../components/client-layout-wrapper";
 
 const play = Play({
   subsets: ["latin"],
@@ -27,8 +26,7 @@ export default function RootLayout({
       <body className="font-anta">
         <PlayerProvider>
           <main>{children}</main>
-          <MobileNav />
-          <MusicPlayer />
+          <ClientLayoutWrapper />
         </PlayerProvider>
       </body>
     </html>

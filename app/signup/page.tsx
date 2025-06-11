@@ -29,23 +29,72 @@ export default function SignupPage() {
 
     const { name, email, password } = formData;
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name }, // optional user metadata
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+        },
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Wait a moment for the session to be established
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Check if user was created and session exists
+      if (data.user && data.session) {
+        // Store user info in localStorage temporarily for the starter page
+        localStorage.setItem(
+          "tempUserData",
+          JSON.stringify({
+            user: data.user,
+            session: data.session,
+            timestamp: Date.now(),
+          })
+        );
+
+        // Successful signup - redirect to start journey page
+        window.location.href = "/home";
+      } else if (data.user && !data.session) {
+        // User created but needs email confirmation
+        setError(
+          "Please check your email and click the confirmation link to continue."
+        );
+        setIsLoading(false);
+      } else {
+        setError("Something went wrong during signup. Please try again.");
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError(err.message || "Something went wrong");
       setIsLoading(false);
-      return;
     }
+  };
 
-    // Successful signup
-    setIsLoading(false);
-    window.location.href = "/home";
+  const handleGoogleSignup = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${location.origin}/auth/callback?redirect=/starter`,
+        },
+      });
+      if (error) {
+        setError(error.message);
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -112,7 +161,11 @@ export default function SignupPage() {
                 </p>
               </div>
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && (
+                <div className="bg-red-900/50 border border-red-500 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
 
               <Button
                 type="submit"
@@ -131,23 +184,10 @@ export default function SignupPage() {
             <div className="space-y-4">
               <Button
                 type="button"
-                onClick={async () => {
-                  try {
-                    const { error } = await supabase.auth.signInWithOAuth({
-                      provider: "google",
-                      options: {
-                        redirectTo: `${location.origin}/auth/callback`,
-                      },
-                    });
-                    if (error) {
-                      setError(error.message);
-                    }
-                  } catch (err: any) {
-                    setError(err.message || "Something went wrong");
-                  }
-                }}
+                onClick={handleGoogleSignup}
                 variant="outline"
                 className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3"
+                disabled={isLoading}
               >
                 <span className="relative z-10 flex items-center space-x-2">
                   {/* Google Icon */}
@@ -173,7 +213,9 @@ export default function SignupPage() {
                       fill="#EA4335"
                     />
                   </svg>
-                  <span>Continue with Google</span>
+                  <span>
+                    {isLoading ? "Signing up..." : "Continue with Google"}
+                  </span>
                 </span>
                 <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
               </Button>

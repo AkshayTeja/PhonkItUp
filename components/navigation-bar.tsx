@@ -1,17 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { usePathname } from "next/navigation"; // Import usePathname
-import { Volume2, Search, Home, User, TrendingUp, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import {
+  Volume2,
+  Search,
+  Home,
+  User,
+  TrendingUp,
+  Menu,
+  X,
+  Vault,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+interface Song {
+  id: number;
+  song_name: string;
+  song_artist: string | null;
+  album_cover_url: string | null;
+}
 
 export function NavigationBar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const pathname = usePathname(); // Get the current path
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Song[]>([]);
+  const pathname = usePathname();
+
+  // Fetch search results from Supabase
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (searchQuery.trim() === "") {
+        setSearchResults([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("phonk_songs")
+        .select("id, song_name, song_artist, album_cover_url")
+        .or(
+          `song_name.ilike.%${searchQuery}%,song_artist.ilike.%${searchQuery}%`
+        )
+        .limit(10);
+
+      if (error) {
+        console.error("Error fetching search results:", error);
+        setSearchResults([]);
+      } else {
+        setSearchResults(data || []);
+      }
+    };
+
+    const debounce = setTimeout(() => {
+      fetchSearchResults();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
 
   // Helper function to determine active link classes
   const getLinkClasses = (href: string) => {
@@ -43,17 +97,18 @@ export function NavigationBar() {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              {/* Home Link */}
               <Link href="/home" className={getLinkClasses("/home")}>
                 <Home className="mr-2 h-4 w-4" />
                 Home
               </Link>
-              {/* What's Hot? Link */}
               <Link href="/trending" className={getLinkClasses("/trending")}>
                 <TrendingUp className="mr-2 h-4 w-4" />
-                What&apos;s Hot?
+                What's Hot?
               </Link>
-              {/* Profile Link */}
+              <Link href="/vault" className={getLinkClasses("/vault")}>
+                <Vault className="mr-2 h-4 w-4" />
+                The Vault
+              </Link>
               <Link href="/profile" className={getLinkClasses("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 Profile
@@ -65,7 +120,37 @@ export function NavigationBar() {
               <Input
                 placeholder="Search tracks, artists..."
                 className="pl-8 bg-gray-900 border-gray-700"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchResults.length > 0 && (
+                <div className="absolute top-full mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                  {searchResults.map((song) => (
+                    <Link
+                      key={song.id}
+                      href={`/vault?song=${encodeURIComponent(song.song_name)}`}
+                      className="flex items-center p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      {song.album_cover_url && (
+                        <img
+                          src={song.album_cover_url}
+                          alt={song.song_name}
+                          className="h-10 w-10 object-cover rounded mr-3"
+                        />
+                      )}
+                      <div>
+                        <div className="font-medium text-white">
+                          {song.song_name}
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          {song.song_artist || "Unknown Artist"}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Mobile Navigation */}
@@ -108,7 +193,6 @@ export function NavigationBar() {
 
                     <div className="flex-1 py-4">
                       <nav className="space-y-2 px-2">
-                        {/* Mobile Home Link */}
                         <Link
                           href="/home"
                           className={getMobileLinkClasses("/home")}
@@ -116,15 +200,20 @@ export function NavigationBar() {
                           <Home className="mr-3 h-5 w-5" />
                           Home
                         </Link>
-                        {/* Mobile What's Hot? Link */}
                         <Link
                           href="/trending"
                           className={getMobileLinkClasses("/trending")}
                         >
                           <TrendingUp className="mr-3 h-5 w-5" />
-                          What&apos;s Hot?
+                          What's Hot?
                         </Link>
-                        {/* Mobile Profile Link */}
+                        <Link
+                          href="/vault"
+                          className={getMobileLinkClasses("/vault")}
+                        >
+                          <Vault className="mr-3 h-5 w-5" />
+                          The Vault
+                        </Link>
                         <Link
                           href="/profile"
                           className={getMobileLinkClasses("/profile")}
@@ -144,22 +233,58 @@ export function NavigationBar() {
 
       {/* Mobile Search Bar */}
       {isSearchOpen && (
-        <div className="md:hidden bg-[#0f0f0f] border-b border-gray-800 p-3 sticky top-16 z-40">
+        <div className="md:hidden bg-[#0f0f0f] border-b border-gray-800 p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search tracks, artists..."
               className="pl-9 bg-gray-900 border-gray-700"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
             />
             <Button
               variant="ghost"
               size="icon"
               className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400"
-              onClick={() => setIsSearchOpen(false)}
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery("");
+              }}
             >
               <X className="h-4 w-4" />
             </Button>
+            {searchResults.length > 0 && (
+              <div className="absolute top-full mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
+                {searchResults.map((song) => (
+                  <Link
+                    key={song.id}
+                    href={`/vault?song=${encodeURIComponent(song.song_name)}`}
+                    className="flex items-center p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0"
+                    onClick={() => {
+                      setIsSearchOpen(false);
+                      setSearchQuery("");
+                    }}
+                  >
+                    {song.album_cover_url && (
+                      <img
+                        src={song.album_cover_url}
+                        alt={song.song_name}
+                        className="h-10 w-10 object-cover rounded mr-3"
+                      />
+                    )}
+                    <div>
+                      <div className="font-medium text-white">
+                        {song.song_name}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {song.song_artist || "Unknown Artist"}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

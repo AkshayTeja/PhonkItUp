@@ -60,6 +60,10 @@ export function MusicPlayer() {
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
+  const handleTimeSliderChange = (value: number[]) => {
+    setCurrentTime(value[0]);
+  };
+
   return (
     <>
       {/* Mobile Navigation */}
@@ -190,7 +194,7 @@ export function MusicPlayer() {
                   max={duration || 100}
                   step={1}
                   className="flex-1 [&>div]:bg-[#ff6700] [&>div>div]:bg-[#ff6700]"
-                  onValueChange={(value) => setCurrentTime(value[0])}
+                  onValueChange={handleTimeSliderChange}
                   disabled={!currentTrack || isLoading}
                 />
                 <span className="text-xs text-gray-400 min-w-[35px]">
