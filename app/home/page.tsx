@@ -12,50 +12,70 @@ import {
   TrendingUp,
   Heart,
   AirplayIcon as PlaylistAdd,
+  Trash2,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavigationBar } from "@/components/navigation-bar";
 import { supabase } from "@/lib/supabaseClient";
 import { usePlayer } from "../context/PlayerContext";
 import { MusicPlayer } from "@/components/music-player";
+import { PlaylistModal } from "@/components/playlist-modal";
+import { AddToPlaylistModal } from "@/components/add-to-playlist-modal";
 import { formatDistanceToNow } from "date-fns";
-
-// Mock data for user's playlists
-const userPlaylists = [
-  {
-    id: 1,
-    title: "My Phonk Favorites",
-    tracks: 24,
-    cover: "/placeholder.svg?height=120&width=120",
-  },
-  {
-    id: 2,
-    title: "Drift Phonk",
-    tracks: 18,
-    cover: "/placeholder.svg?height=120&width=120",
-  },
-  {
-    id: 3,
-    title: "Workout Phonk",
-    tracks: 15,
-    cover: "/placeholder.svg?height=120&width=120",
-  },
-  {
-    id: 4,
-    title: "Chill Phonk",
-    tracks: 12,
-    cover: "/placeholder.svg?height=120&width=120",
-  },
-];
 
 export default function HomePage() {
   const [username, setUsername] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
   const [showGreeting, setShowGreeting] = useState(false);
   const [likedSongs, setLikedSongs] = useState<any[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<any[]>([]);
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] =
+    useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { playTrack } = usePlayer();
   const router = useRouter();
+
+  // Function to fetch playlists (used after creating or updating playlists)
+  const fetchPlaylists = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("playlists")
+          .select(
+            `
+            id,
+            title,
+            cover_url,
+            playlist_tracks (
+              count
+            )
+          `
+          )
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (error) throw new Error(`Playlists fetch error: ${error.message}`);
+        setPlaylists(
+          data?.map((playlist) => ({
+            id: playlist.id,
+            title: playlist.title,
+            tracks: playlist.playlist_tracks?.count || 0,
+            cover:
+              playlist.cover_url || "/placeholder.svg?height=120&width=120",
+          })) || []
+        );
+      }
+    } catch (error: any) {
+      console.error("Error fetching playlists:", error.message || error);
+      setErrorMessage("Failed to fetch playlists. Please try again.");
+    }
+  };
 
   // Check for existing session and auth state changes
   useEffect(() => {
@@ -73,6 +93,7 @@ export default function HomePage() {
             session.user.user_metadata?.display_name ||
             `user_${session.user.id.slice(0, 8)}`;
           setUsername(displayName);
+          setUserId(session.user.id);
 
           const hasShownGreeting = sessionStorage.getItem("hasShownGreeting");
           if (!hasShownGreeting) {
@@ -88,8 +109,11 @@ export default function HomePage() {
               session.user.user_metadata?.display_name ||
               `user_${session.user.id.slice(0, 8)}`;
             setUsername(displayName);
+            setUserId(session.user.id);
             sessionStorage.removeItem("hasShownGreeting");
             setShowGreeting(true);
+          } else if (event === "SIGNED_OUT") {
+            setUserId(null);
           }
         });
 
@@ -113,7 +137,7 @@ export default function HomePage() {
     }
   }, [showGreeting]);
 
-  // Fetch user data, liked songs, and recently played songs on mount
+  // Fetch user data, liked songs, recently played songs, and playlists on mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -123,6 +147,9 @@ export default function HomePage() {
         } = await supabase.auth.getUser();
         if (authError) throw new Error(`Auth error: ${authError.message}`);
         if (!user) throw new Error("No user found");
+
+        // Fetch playlists
+        await fetchPlaylists();
 
         // Fetch liked songs
         const { data: liked, error: likedError } = await supabase
@@ -180,7 +207,7 @@ export default function HomePage() {
           )
           .eq("user_id", user.id)
           .order("played_at", { ascending: false })
-          .limit(5); // Limit to 10 recent tracks
+          .limit(5);
         if (recentError)
           throw new Error(
             `Recently played fetch error: ${recentError.message}`
@@ -196,7 +223,7 @@ export default function HomePage() {
             track_url: item.phonk_songs.track_url,
             playedAt: formatDistanceToNow(new Date(item.played_at), {
               addSuffix: true,
-            }), // e.g., "2 hours ago"
+            }),
             duration: item.duration,
           })) || []
         );
@@ -208,9 +235,34 @@ export default function HomePage() {
     fetchUserData();
   }, []);
 
-  // Handle navigation with router.push as fallback
+  // Handle navigation
   const handleNavigation = (href: string) => {
     router.push(href);
+  };
+
+  // Handle playlist deletion
+  const handleDeletePlaylist = async (playlistId: string) => {
+    try {
+      const { error } = await supabase
+        .from("playlists")
+        .delete()
+        .eq("id", playlistId);
+      if (error) throw new Error(`Delete playlist error: ${error.message}`);
+      setPlaylists(playlists.filter((playlist) => playlist.id !== playlistId));
+    } catch (error: any) {
+      setErrorMessage(error.message || "Failed to delete playlist");
+    }
+  };
+
+  // Handle track added to playlist
+  const handleTrackAdded = (playlistId: string) => {
+    setPlaylists((prev) =>
+      prev.map((playlist) =>
+        playlist.id === playlistId
+          ? { ...playlist, tracks: playlist.tracks + 1 }
+          : playlist
+      )
+    );
   };
 
   return (
@@ -283,42 +335,69 @@ export default function HomePage() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">Your Playlists</h2>
-            <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
+            <Button
+              onClick={() => setIsPlaylistModalOpen(true)}
+              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+            >
               <PlaylistAdd className="mr-2 h-4 w-4" />
               Create Playlist
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {userPlaylists.map((playlist) => (
-              <Link
-                href={`/playlist/${playlist.id}`}
-                key={playlist.id}
-                className="group"
-                onClick={() => handleNavigation(`/playlist/${playlist.id}`)}
-              >
-                <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
-                  <div className="relative aspect-square">
-                    <Image
-                      src={playlist.cover || "/placeholder.svg"}
-                      alt={playlist.title}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <Button className="bg-[#ff6700] hover:bg-[#cc5300] h-12 w-12 rounded-full p-0">
-                        <Play className="h-6 w-6" />
-                      </Button>
+            {playlists.length === 0 ? (
+              <div className="col-span-full text-center text-gray-400">
+                No playlists yet. Create one to get started!
+              </div>
+            ) : (
+              playlists.map((playlist) => (
+                <div key={playlist.id} className="group relative">
+                  <Link
+                    href={`/playlist/${playlist.id}`}
+                    className="block"
+                    onClick={() => handleNavigation(`/playlist/${playlist.id}`)}
+                  >
+                    <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={playlist.cover || "/placeholder.svg"}
+                          alt={playlist.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                          <Button className="play-button h-12 w-12 rounded-full p-0">
+                            <Play className="h-6 w-6" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="p-4 flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium truncate">
+                            {playlist.title}
+                          </h3>
+                          <p className="text-sm text-gray-400">
+                            {playlist.tracks} tracks
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-400"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeletePlaylist(playlist.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium truncate">{playlist.title}</h3>
-                    <p className="text-sm text-gray-400">
-                      {playlist.tracks} tracks
-                    </p>
-                  </div>
+                  </Link>
                 </div>
-              </Link>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -343,36 +422,53 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {likedSongs.map((track) => (
-                <div
-                  key={track.id}
-                  className="group cursor-pointer"
-                  onClick={() => playTrack(track)}
-                >
-                  <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={track.cover || "/placeholder.svg"}
-                        alt={track.title}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <Button className="play-button h-12 w-12 rounded-full p-0">
-                          <Play className="h-6 w-6" />
-                        </Button>
+                <div key={track.id} className="group relative">
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => playTrack(track)}
+                  >
+                    <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={track.cover || "/placeholder.svg"}
+                          alt={track.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                          <Button className="play-button h-12 w-12 rounded-full p-0">
+                            <Play className="h-6 w-6" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium truncate">{track.title}</h3>
-                      <p className="text-sm text-gray-400 truncate">
-                        {track.artist}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {Math.floor(parseInt(track.duration) / 60)}:
-                        {(parseInt(track.duration) % 60)
-                          .toString()
-                          .padStart(2, "0")}
-                      </p>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium truncate">
+                            {track.title}
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-[#ff6700] hover:text-[#cc5300]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTrackId(track.id);
+                              setIsAddToPlaylistModalOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">
+                          {track.artist}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {Math.floor(parseInt(track.duration) / 60)}:
+                          {(parseInt(track.duration) % 60)
+                            .toString()
+                            .padStart(2, "0")}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -403,35 +499,54 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {recentlyPlayed.map((track) => (
-                <div
-                  key={track.id}
-                  className="group cursor-pointer"
-                  onClick={() => playTrack(track)}
-                >
-                  <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={track.cover || "/placeholder.svg"}
-                        alt={track.title}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                        <Button className="play-button h-12 w-12 rounded-full p-0">
-                          <Play className="h-6 w-6" />
-                        </Button>
+                <div key={track.id} className="group relative">
+                  <div
+                    className="cursor-pointer"
+                    onClick={() => playTrack(track)}
+                  >
+                    <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={track.cover || "/placeholder.svg"}
+                          alt={track.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                          <Button className="play-button h-12 w-12 rounded-full p-0">
+                            <Play className="h-6 w-6" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium truncate">{track.title}</h3>
-                      <p className="text-sm text-gray-400 truncate">
-                        {track.artist}
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {Math.floor(track.duration / 60)}:
-                        {(track.duration % 60).toString().padStart(2, "0")}
-                      </p>
-                      <p className="text-sm text-gray-400">{track.playedAt}</p>
+                      <div className="p-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium truncate">
+                            {track.title}
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-[#ff6700] hover:text-[#cc5300]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTrackId(track.id);
+                              setIsAddToPlaylistModalOpen(true);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-400 truncate">
+                          {track.artist}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {Math.floor(track.duration / 60)}:
+                          {(track.duration % 60).toString().padStart(2, "0")}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {track.playedAt}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -479,6 +594,24 @@ export default function HomePage() {
       </div>
 
       <MusicPlayer />
+      <PlaylistModal
+        isOpen={isPlaylistModalOpen}
+        onClose={() => setIsPlaylistModalOpen(false)}
+        onPlaylistCreated={() => {
+          fetchPlaylists();
+        }}
+        userId={userId}
+      />
+      <AddToPlaylistModal
+        isOpen={isAddToPlaylistModalOpen}
+        onClose={() => {
+          setIsAddToPlaylistModalOpen(false);
+          setSelectedTrackId(null);
+        }}
+        onTrackAdded={handleTrackAdded} // New prop to handle track addition
+        trackId={selectedTrackId || ""}
+        userId={userId}
+      />
     </div>
   );
 }
