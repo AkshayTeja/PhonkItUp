@@ -54,6 +54,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const isDragging = useRef(false);
+  const lastUpdateTime = useRef<number>(0); // Track last state update time
 
   // Initialize audio element
   useEffect(() => {
@@ -76,6 +77,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.removeEventListener("loadstart", handleLoadStart);
       audio.pause();
       audio.src = "";
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     };
   }, []);
 
@@ -174,8 +178,35 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
   };
 
-  const playTrack = (track: Track) => {
+  const playTrack = async (track: Track) => {
     setCurrentTrack(track);
+
+    // Log to recently_played table
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const durationInSeconds = parseInt(track.duration); // Convert duration to integer (seconds)
+        if (!isNaN(durationInSeconds)) {
+          const { error } = await supabase.from("recently_played").insert({
+            user_id: user.id,
+            track_id: track.id,
+            duration: durationInSeconds,
+          });
+          if (error) {
+            console.error(
+              "Error logging recently played track:",
+              error.message
+            );
+          }
+        } else {
+          console.warn("Invalid track duration:", track.duration);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error logging recently played track:", error.message);
+    }
   };
 
   const togglePlay = () => {
@@ -221,9 +252,16 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const syncTime = () => {
-    if (audioRef.current && !isDragging.current) {
-      setCurrentTime(audioRef.current.currentTime);
+    if (audioRef.current && !isDragging.current && isPlaying) {
+      const now = performance.now();
+      // Update state only every 1000ms (1 second)
+      if (now - lastUpdateTime.current >= 1000) {
+        setCurrentTime(audioRef.current.currentTime);
+        lastUpdateTime.current = now;
+      }
       animationRef.current = requestAnimationFrame(syncTime);
+    } else if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
     }
   };
 

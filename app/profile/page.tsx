@@ -15,11 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { NavigationBar } from "@/components/navigation-bar";
 import { MusicPlayer } from "@/components/music-player";
 import { supabase } from "@/lib/supabaseClient";
 import { useState, useEffect } from "react";
+import { formatDistanceToNow } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -58,45 +58,6 @@ const userPlaylists = [
   },
 ];
 
-// Mock data for recently played
-const recentlyPlayed = [
-  {
-    id: 1,
-    title: "Midnight Drift",
-    artist: "SHADXWBXRN",
-    playedAt: "2 hours ago",
-    cover: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 2,
-    title: "Tokyo Phonk",
-    artist: "Dvrst",
-    playedAt: "Yesterday",
-    cover: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 3,
-    title: "Murder In My Mind",
-    artist: "Kordhell",
-    playedAt: "Yesterday",
-    cover: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 4,
-    title: "Close Eyes",
-    artist: "DVRST",
-    playedAt: "2 days ago",
-    cover: "/placeholder.svg?height=80&width=80",
-  },
-  {
-    id: 5,
-    title: "Sahara",
-    artist: "Hensonn",
-    playedAt: "3 days ago",
-    cover: "/placeholder.svg?height=80&width=80",
-  },
-];
-
 export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -108,9 +69,10 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [likedSongs, setLikedSongs] = useState<any[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<any[]>([]);
   const { playTrack } = usePlayer();
 
-  // Fetch user data and liked songs on mount
+  // Fetch user data, liked songs, and recently played on mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -122,11 +84,14 @@ export default function ProfilePage() {
         if (!user) throw new Error("No user found");
 
         setUserId(user.id);
+        // Fetch full name from user_metadata
+        const fullName = user.user_metadata?.full_name || "New User";
+
+        // Fetch display name (username) from user_metadata or generate a unique one
         const displayName =
-          user.user_metadata?.display_name ||
-          user.email?.split("@")[0] ||
-          "User";
+          user.user_metadata?.display_name || `user_${user.id.slice(0, 8)}`;
         setUsername(displayName);
+        setName(fullName);
 
         // Fetch profile data
         const { data: profile, error: profileError } = await supabase
@@ -140,7 +105,9 @@ export default function ProfilePage() {
         }
 
         if (profile) {
-          setName(profile.name || "");
+          setName(
+            fullName !== "New User" ? fullName : profile.name || fullName
+          );
           setProfilePic(profile.profile_picture || "/profilepic.jpg");
           setWallpaper(profile.wallpaper || "/profilewallpaper.jpg");
         }
@@ -168,17 +135,61 @@ export default function ProfilePage() {
           throw new Error(`Liked songs fetch error: ${likedError.message}`);
         setLikedSongs(
           liked?.map((item) => ({
-            id: item.phonk_songs.id,
-            title: item.phonk_songs.song_name,
-            artist: item.phonk_songs.song_artist,
+            id: item.phonk_songs.id.toString(), // Ensure id is string
+            title: item.phonk_songs.song_name || "Unknown Title",
+            artist: item.phonk_songs.song_artist || "Unknown Artist",
+            duration: item.phonk_songs.song_duration?.toString() || "0",
+            plays: "0", // Mocked
             cover:
               item.phonk_songs.album_cover_url ||
               "/placeholder.svg?height=80&width=80",
-            track_url: item.phonk_songs.track_url,
-            popularity: item.phonk_songs.song_popularity || 0,
-            duration: item.phonk_songs.song_duration?.toString() || "0",
-            plays: "0", // Mocked
             change: "0", // Mocked
+            popularity: item.phonk_songs.song_popularity || 0,
+            track_url: item.phonk_songs.track_url || "",
+          })) || []
+        );
+
+        // Fetch recently played songs
+        const { data: recent, error: recentError } = await supabase
+          .from("recently_played")
+          .select(
+            `
+            track_id,
+            played_at,
+            duration,
+            phonk_songs (
+              id,
+              song_name,
+              song_artist,
+              album_cover_url,
+              track_url,
+              song_popularity
+            )
+          `
+          )
+          .eq("user_id", user.id)
+          .order("played_at", { ascending: false })
+          .limit(5);
+        if (recentError)
+          throw new Error(
+            `Recently played fetch error: ${recentError.message}`
+          );
+        setRecentlyPlayed(
+          recent?.map((item) => ({
+            id: item.phonk_songs.id.toString(), // Ensure id is string
+            title: item.phonk_songs.song_name || "Unknown Title",
+            artist: item.phonk_songs.song_artist || "Unknown Artist",
+            duration: item.duration?.toString() || "0",
+            plays: "0", // Mocked
+            cover:
+              item.phonk_songs.album_cover_url ||
+              "/placeholder.svg?height=80&width=80",
+            change: "0", // Mocked
+            popularity: item.phonk_songs.song_popularity || 0,
+            track_url: item.phonk_songs.track_url || "",
+            playedAt: formatDistanceToNow(new Date(item.played_at), {
+              addSuffix: true,
+            }),
           })) || []
         );
       } catch (error: any) {
@@ -305,6 +316,26 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-black text-white flex flex-col">
       <NavigationBar />
       <div className="flex-1 container mx-auto px-4 py-8">
+        <style jsx>{`
+          .play-overlay {
+            background: linear-gradient(
+              to bottom,
+              rgba(0, 0, 0, 0.3),
+              rgba(255, 103, 0, 0.2)
+            );
+            transition: opacity 0.3s ease-in-out, background 0.3s ease-in-out;
+          }
+
+          .play-button {
+            background: rgba(255, 103, 0, 0.9) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+          }
+
+          .group:hover .play-button {
+            transform: scale(1.1);
+          }
+        `}</style>
         {errorMessage && (
           <div className="bg-red-500/20 border border-red-500 text-red-500 p-4 rounded-md mb-4">
             {errorMessage}
@@ -531,38 +562,68 @@ export default function ProfilePage() {
 
             <TabsContent value="recent" className="mt-6">
               <h2 className="text-2xl font-bold mb-6">Recently Played</h2>
-              <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 overflow-hidden">
-                <ScrollArea className="h-[400px]">
+              {recentlyPlayed.length === 0 ? (
+                <div className="bg-[#0f0f0f] rounded-xl border border-gray-600 p-8 text-center">
+                  <Clock className="h-16 w-16 text-[#ff6700] mx-auto mb-4" />
+                  <h3 className="text-xl font-bold mb-2">
+                    No recently played tracks yet
+                  </h3>
+                  <p className="text-gray-400 mb-6">
+                    Play some tracks to see them here
+                  </p>
+                  <Link href="/home">
+                    <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
+                      Discover Music
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                   {recentlyPlayed.map((track) => (
                     <div
                       key={track.id}
-                      className="flex items-center p-4 hover:bg-gray-800/30 cursor-pointer transition-colors"
+                      className="group cursor-pointer"
+                      onClick={() => {
+                        console.log("Playing track:", track); // Debug
+                        playTrack(track);
+                      }}
                     >
-                      <div className="relative group mr-4">
-                        <Image
-                          src={track.cover || "/placeholder.svg"}
-                          alt={track.title}
-                          width={48}
-                          height={48}
-                          className="rounded"
-                        />
-                        <div className="absolute inset-0 bg-black/60 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <Music className="h-5 w-5 text-white" />
+                      <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
+                        <div className="relative aspect-square">
+                          <Image
+                            src={track.cover || "/placeholder.svg"}
+                            alt={track.title}
+                            fill
+                            className="object-cover"
+                          />
+                          <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                            <Button className="play-button h-12 w-12 rounded-full p-0">
+                              <Play className="h-6 w-6" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{track.title}</div>
-                        <div className="text-sm text-gray-400">
-                          {track.artist}
+                        <div className="p-4">
+                          <h3 className="font-medium truncate">
+                            {track.title}
+                          </h3>
+                          <p className="text-sm text-gray-400 truncate">
+                            {track.artist}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {Math.floor(parseInt(track.duration) / 60)}:
+                            {(parseInt(track.duration) % 60)
+                              .toString()
+                              .padStart(2, "0")}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {track.playedAt}
+                          </p>
                         </div>
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {track.playedAt}
                       </div>
                     </div>
                   ))}
-                </ScrollArea>
-              </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="liked" className="mt-6">
@@ -588,7 +649,10 @@ export default function ProfilePage() {
                     <div
                       key={track.id}
                       className="group cursor-pointer"
-                      onClick={() => playTrack(track)}
+                      onClick={() => {
+                        console.log("Playing track:", track); // Debug
+                        playTrack(track);
+                      }}
                     >
                       <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
                         <div className="relative aspect-square">
@@ -598,8 +662,8 @@ export default function ProfilePage() {
                             fill
                             className="object-cover"
                           />
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                            <Button className="bg-[#ff6700] hover:bg-[#cc5300] h-12 w-12 rounded-full p-0">
+                          <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                            <Button className="play-button h-12 w-12 rounded-full p-0">
                               <Play className="h-6 w-6" />
                             </Button>
                           </div>
@@ -608,6 +672,9 @@ export default function ProfilePage() {
                           <h3 className="font-medium truncate">
                             {track.title}
                           </h3>
+                          <p className="text-sm text-gray-400 truncate">
+                            {track.artist}
+                          </p>
                           <p className="text-sm text-gray-400">
                             {Math.floor(parseInt(track.duration) / 60)}:
                             {(parseInt(track.duration) % 60)
