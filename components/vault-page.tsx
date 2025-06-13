@@ -106,7 +106,7 @@ export default function VaultPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       <NavigationBar />
-      <div className="flex-1 container mx-auto px-4 py-8">
+      <div className="flex-1 container mx-auto px-4 py-8 pb-24">
         <style jsx>{`
           .highlighted {
             position: relative;

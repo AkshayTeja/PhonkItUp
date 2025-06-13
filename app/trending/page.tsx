@@ -217,7 +217,7 @@ export default function TrendingPage() {
     <div className="min-h-screen bg-black text-white flex flex-col mb-15">
       <NavigationBar />
 
-      <div className="flex-1 container mx-auto px-4 py-8">
+      <div className="flex-1 container mx-auto px-4 py-8 pb-24">
         <div className="flex items-center mb-8">
           <TrendingUp className="h-8 w-8 text-[#ff6700] mr-3" />
           <h1 className="text-3xl font-bold">Top Tracks</h1>
