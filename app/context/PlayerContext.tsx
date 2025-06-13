@@ -11,15 +11,16 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 
 interface Track {
-  id: string | number; // Matches phonk_songs.id (bigint)
-  title: string; // Maps to song_name
-  artist: string; // Maps to song_artist
-  duration: string; // Maps to song_duration (as string for display)
-  plays: string; // Mocked, not in phonk_songs
-  cover: string; // Maps to album_cover_url
-  change: string; // Mocked, not in phonk_songs
-  popularity: number; // Maps to song_popularity
-  track_url: string; // Maps to track_url
+  id: string | number;
+  title: string;
+  artist: string;
+  duration: string;
+  plays: string;
+  cover: string;
+  change: string;
+  popularity: number;
+  track_url: string;
+  playlist_track_id?: string;
 }
 
 interface PlayerContextType {
@@ -31,10 +32,20 @@ interface PlayerContextType {
   liked: boolean;
   isLoading: boolean;
   error: string | null;
-  playTrack: (track: Track) => void;
+  queue: Track[];
+  currentTrackIndex: number;
+  playlistName: string | null;
+  playTrack: (
+    track: Track,
+    queue?: Track[],
+    index?: number,
+    playlistName?: string
+  ) => void;
   togglePlay: () => void;
   skipForward: () => void;
   skipBackward: () => void;
+  skipForwardSeconds: () => void;
+  skipBackwardSeconds: () => void;
   setCurrentTime: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleLike: () => Promise<void>;
@@ -51,10 +62,23 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [liked, setLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queue, setQueue] = useState<Track[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
+  const [playlistName, setPlaylistName] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const isDragging = useRef(false);
-  const lastUpdateTime = useRef<number>(0); // Track last state update time
+  const lastUpdateTime = useRef<number>(0);
+
+  // Log queue changes
+  useEffect(() => {
+    console.log("Queue state changed:", {
+      queueLength: queue.length,
+      queue: queue.map((t) => t.title),
+      currentTrackIndex,
+      playlistName,
+    });
+  }, [queue, currentTrackIndex, playlistName]);
 
   // Initialize audio element
   useEffect(() => {
@@ -83,7 +107,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Load and play track when currentTrack changes
+  // Load and play current track
   useEffect(() => {
     if (currentTrack && currentTrack.track_url && audioRef.current) {
       setError(null);
@@ -106,18 +130,29 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           console.error("Error playing track:", error);
           setError("Failed to play track");
           setIsLoading(false);
+          setIsPlaying(false);
+          // Do not clear queue or currentTrack on error to allow retry
         });
+    } else if (!currentTrack) {
+      // Clear audio if no track is selected
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
     }
   }, [currentTrack]);
 
-  // Update audio volume
+  // Update volume
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume / 100;
     }
   }, [volume]);
 
-  // Check if current track is liked
+  // Check if track is liked
   useEffect(() => {
     const checkIfLiked = async () => {
       if (!currentTrack) {
@@ -128,18 +163,36 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (user) {
-          const { data } = await supabase
-            .from("liked_songs")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("track_id", currentTrack.id)
-            .single();
-          setLiked(!!data);
+        if (!user) {
+          console.warn("No user authenticated, skipping like check");
+          setLiked(false);
+          return;
         }
-      } catch (err) {
-        console.error("Error checking liked status:", err);
-        setError("Failed to check liked status");
+        const { data, error } = await supabase
+          .from("liked_songs")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("track_id", String(currentTrack.id))
+          .maybeSingle();
+        if (error) {
+          console.error("Error checking liked status:", {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          });
+          setError("Failed to check like status");
+          setLiked(false);
+          return;
+        }
+        setLiked(!!data);
+      } catch (err: any) {
+        console.error(
+          "Unexpected error checking liked status:",
+          err.message || err
+        );
+        setError("Unexpected error checking like status");
+        setLiked(false);
       }
     };
     checkIfLiked();
@@ -158,15 +211,30 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleTrackEnded = () => {
+    console.log("Track ended:", {
+      currentTrack: currentTrack?.title,
+      currentTrackIndex,
+      queueLength: queue.length,
+    });
+
+    // Pause the player and keep the current track
     setIsPlaying(false);
-    setCurrentTime(0);
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0; // Reset to start for replay option
+      setCurrentTime(0);
+    }
+    setError("Please select the next song to play");
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
   };
 
   const handleAudioError = () => {
     setError("Failed to load audio");
     setIsLoading(false);
     setIsPlaying(false);
+    // Do not clear queue or currentTrack on error to allow retry
   };
 
   const handleCanPlay = () => {
@@ -178,20 +246,39 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
   };
 
-  const playTrack = async (track: Track) => {
+  const playTrack = async (
+    track: Track,
+    newQueue: Track[] = [],
+    index: number = 0,
+    playlistName: string = ""
+  ) => {
+    console.log("playTrack called:", {
+      track: track.title,
+      queueLength: newQueue.length || queue.length || 1,
+      index,
+      playlistName,
+      newQueue: newQueue.map((t) => t.title),
+      existingQueue: queue.map((t) => t.title),
+    });
+    setPlaylistName(playlistName || null);
+    const updatedQueue =
+      newQueue.length > 0 ? newQueue : queue.length > 0 ? queue : [track];
+    setQueue(updatedQueue);
     setCurrentTrack(track);
+    setCurrentTrackIndex(
+      newQueue.length > 0 ? index : updatedQueue.indexOf(track)
+    );
 
-    // Log to recently_played table
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const durationInSeconds = parseInt(track.duration); // Convert duration to integer (seconds)
+        const durationInSeconds = parseDuration(track.duration);
         if (!isNaN(durationInSeconds)) {
           const { error } = await supabase.from("recently_played").insert({
             user_id: user.id,
-            track_id: track.id,
+            track_id: String(track.id),
             duration: durationInSeconds,
           });
           if (error) {
@@ -209,9 +296,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const parseDuration = (duration: string): number => {
+    const [minutes, seconds] = duration.split(":").map(Number);
+    return (minutes || 0) * 60 + (seconds || 0);
+  };
+
   const togglePlay = () => {
     if (!currentTrack || !currentTrack.track_url || !audioRef.current) {
       console.warn("No track selected or track URL missing");
+      setError("No track selected");
       return;
     }
     if (isPlaying) {
@@ -234,6 +327,53 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const skipForward = () => {
+    console.log("skipForward:", {
+      currentTrackIndex,
+      queueLength: queue.length,
+    });
+    if (queue.length === 0) {
+      console.log("No queue, cannot skip forward");
+      setError("No tracks in queue");
+      return;
+    }
+    let nextIndex = currentTrackIndex + 1;
+    if (nextIndex < queue.length) {
+      console.log("Skipping to next track:", queue[nextIndex].title);
+      setCurrentTrack(queue[nextIndex]);
+      setCurrentTrackIndex(nextIndex);
+    } else {
+      console.log("No next track, stopping playback");
+      setCurrentTrack(null);
+      setCurrentTrackIndex(-1);
+      setIsPlaying(false);
+      setPlaylistName(null);
+      setError("No more tracks");
+    }
+  };
+
+  const skipBackward = () => {
+    console.log("skipBackward:", {
+      currentTrackIndex,
+      queueLength: queue.length,
+    });
+    if (queue.length === 0) {
+      console.log("No queue, cannot skip backward");
+      setError("No tracks in queue");
+      return;
+    }
+    let prevIndex = currentTrackIndex - 1;
+    if (prevIndex >= 0) {
+      console.log("Skipping to previous track:", queue[prevIndex].title);
+      setCurrentTrack(queue[prevIndex]);
+      setCurrentTrackIndex(prevIndex);
+    } else {
+      console.log("No previous track, staying at first track");
+      setCurrentTrack(queue[0]);
+      setCurrentTrackIndex(0);
+    }
+  };
+
+  const skipForwardSeconds = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.min(
         audioRef.current.currentTime + 10,
@@ -242,7 +382,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const skipBackward = () => {
+  const skipBackwardSeconds = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = Math.max(
         audioRef.current.currentTime - 10,
@@ -254,7 +394,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const syncTime = () => {
     if (audioRef.current && !isDragging.current && isPlaying) {
       const now = performance.now();
-      // Update state only every 1000ms (1 second)
       if (now - lastUpdateTime.current >= 1000) {
         setCurrentTime(audioRef.current.currentTime);
         lastUpdateTime.current = now;
@@ -281,30 +420,50 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      if (!user) {
+        setError("User not authenticated");
+        return;
+      }
 
-      const { data: existingLike } = await supabase
+      const { data: existingLike, error: selectError } = await supabase
         .from("liked_songs")
         .select("id")
         .eq("user_id", user.id)
-        .eq("track_id", currentTrack.id)
-        .single();
+        .eq("track_id", String(currentTrack.id))
+        .maybeSingle();
+
+      if (selectError) {
+        console.error("Select error:", {
+          message: selectError.message,
+          code: selectError.code,
+          details: selectError.details,
+          hint: selectError.hint,
+        });
+        setError("Failed to check like status");
+        return;
+      }
 
       if (existingLike) {
-        // Unlike: Delete from liked_songs
         const { error } = await supabase
           .from("liked_songs")
           .delete()
           .eq("id", existingLike.id);
-        if (error) throw new Error(`Unlike error: ${error.message}`);
-        setLiked(false);
+        if (error) {
+          console.error("Unlike error:", error.message);
+          setError("Failed to unlike track");
+        } else {
+          setLiked(false);
+        }
       } else {
-        // Like: Insert into liked_songs
         const { error } = await supabase
           .from("liked_songs")
-          .insert({ user_id: user.id, track_id: currentTrack.id });
-        if (error) throw new Error(`Like error: ${error.message}`);
-        setLiked(true);
+          .insert({ user_id: user.id, track_id: String(currentTrack.id) });
+        if (error) {
+          console.error("Like error:", error.message);
+          setError("Failed to like track");
+        } else {
+          setLiked(true);
+        }
       }
     } catch (err: any) {
       console.error("Error toggling like:", err.message);
@@ -331,10 +490,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         liked,
         isLoading,
         error,
+        queue,
+        currentTrackIndex,
+        playlistName,
         playTrack,
         togglePlay,
         skipForward,
         skipBackward,
+        skipForwardSeconds,
+        skipBackwardSeconds,
         setCurrentTime: handleSetCurrentTime,
         setVolume,
         toggleLike,

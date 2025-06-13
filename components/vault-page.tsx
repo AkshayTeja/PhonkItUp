@@ -1,30 +1,56 @@
-// components/VaultPage.js
 "use client";
 
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Play } from "lucide-react";
+import { Play, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavigationBar } from "@/components/navigation-bar";
-import { MusicPlayer } from "@/components/music-player";
+import MusicPlayer from "@/components/music-player";
 import { supabase } from "@/lib/supabaseClient";
 import { usePlayer } from "../app/context/PlayerContext";
+import { AddToPlaylistModal } from "@/components/add-to-playlist-modal";
+
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  cover: string;
+  track_url: string;
+  popularity: number;
+  duration: string;
+  plays: string;
+  change: string;
+}
 
 export default function VaultPage() {
-  const [songs, setSongs] = useState<any[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] =
+    useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const { playTrack } = usePlayer();
   const searchParams = useSearchParams();
   const highlightedSongRef = useRef<HTMLDivElement | null>(null);
   const highlightedSong = searchParams.get("song");
 
-  // Fetch all songs from phonk_songs in alphabetical order
+  // Fetch user ID and songs
   useEffect(() => {
-    const fetchSongs = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
+
+        // Fetch user ID
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+        if (authError) throw new Error(`Auth error: ${authError.message}`);
+        if (user) setUserId(user.id);
+
+        // Fetch all songs from phonk_songs in alphabetical order
         const { data: songsData, error: songsError } = await supabase
           .from("phonk_songs")
           .select(
@@ -51,13 +77,13 @@ export default function VaultPage() {
           })) || []
         );
       } catch (error: any) {
-        console.error("Error fetching songs:", error.message || error);
+        console.error("Error fetching data:", error.message || error);
         setErrorMessage("Failed to load songs. Please try again.");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchSongs();
+    fetchData();
   }, []);
 
   // Scroll to the highlighted song and center it
@@ -70,6 +96,12 @@ export default function VaultPage() {
       });
     }
   }, [highlightedSong, songs]);
+
+  // Handle track added to playlist (optional, for consistency with HomePage)
+  const handleTrackAdded = async () => {
+    // No action needed unless you want to refresh data or show a notification
+    console.log("Track added to playlist");
+  };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
@@ -190,7 +222,7 @@ export default function VaultPage() {
                 className={`group cursor-pointer ${
                   track.title === highlightedSong ? "highlighted" : ""
                 }`}
-                onClick={() => playTrack(track)}
+                onClick={() => playTrack(track)} // Add this line
               >
                 <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
                   <div className="relative aspect-square">
@@ -207,7 +239,21 @@ export default function VaultPage() {
                     </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="font-medium truncate">{track.title}</h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium truncate">{track.title}</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-[#ff6700] hover:text-[#cc5300]"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent triggering the parent onClick
+                          setSelectedTrackId(track.id);
+                          setIsAddToPlaylistModalOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <p className="text-sm text-gray-400 truncate">
                       {track.artist}
                     </p>
@@ -225,6 +271,16 @@ export default function VaultPage() {
         )}
       </div>
       <MusicPlayer />
+      <AddToPlaylistModal
+        isOpen={isAddToPlaylistModalOpen}
+        onClose={() => {
+          setIsAddToPlaylistModalOpen(false);
+          setSelectedTrackId(null);
+        }}
+        onTrackAdded={handleTrackAdded}
+        trackId={selectedTrackId || ""}
+        userId={userId}
+      />
     </div>
   );
 }

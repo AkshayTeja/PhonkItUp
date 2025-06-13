@@ -28,12 +28,18 @@ interface Track {
 }
 
 const defaultTrack = {
+  id: "",
   title: "No Track Selected",
   artist: "Unknown Artist",
-  cover: "/placeholder.svg?height=80&width=80",
+  duration: "0:00",
+  plays: "0",
+  cover: "/placeholder.svg?height=40&width=40",
+  change: "",
+  popularity: 0,
+  track_url: "",
 };
 
-export function MusicPlayer() {
+export default function MusicPlayer() {
   const {
     currentTrack,
     isPlaying,
@@ -43,9 +49,14 @@ export function MusicPlayer() {
     liked,
     isLoading,
     error,
+    queue,
+    currentTrackIndex,
+    playlistName,
     togglePlay,
     skipForward,
     skipBackward,
+    skipForwardSeconds,
+    skipBackwardSeconds,
     setCurrentTime,
     setVolume,
     toggleLike,
@@ -63,6 +74,9 @@ export function MusicPlayer() {
   const handleTimeSliderChange = (value: number[]) => {
     setCurrentTime(value[0]);
   };
+
+  const hasNextTrack = queue.length > 0 && currentTrackIndex < queue.length - 1;
+  const hasPreviousTrack = queue.length > 0 && currentTrackIndex > 0;
 
   return (
     <>
@@ -102,46 +116,51 @@ export function MusicPlayer() {
         <div className="container mx-auto px-4">
           <div className="flex items-center h-16">
             {/* Track Info */}
-            <div className="flex items-center flex-1">
+            <div className="flex items-center flex-1 min-w-0">
               <Image
-                src={track.cover || "/placeholder.svg"}
+                src={track.cover || defaultTrack.cover}
                 alt={track.title}
-                width={48}
-                height={48}
-                className="rounded mr-3 hidden sm:block"
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/placeholder.svg?height=48&width=48";
+                width={40}
+                height={40}
+                className="rounded-sm mr-3 hidden sm:block object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = defaultTrack.cover;
                 }}
               />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 font-medium truncate">
-                  <span className="text-white">
-                    {track.title}
-                    <div className="text-sm text-gray-400 truncate -mt-1 leading-snug">
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <div className="truncate flex-1 flex items-center gap-1">
+                  <div className="truncate">
+                    <span className="text-sm text-white font-medium truncate block">
+                      {track.title}
+                    </span>
+                    <span className="text-xs text-gray-400 truncate block">
                       {track.artist}
-                    </div>
-                  </span>
+                    </span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={toggleLike}
-                    className="p-0 transition-colors duration-300 hover:bg-transparent"
+                    className="p-0 hover:bg-transparent flex-shrink-0"
+                    disabled={isLoading || !currentTrack}
                   >
                     <Heart
-                      className={`h-5 w-5 ${
+                      className={`h-4 w-4 ${
                         liked
-                          ? "text-[#ff6700]"
+                          ? "text-[#ff6700] fill-[#ff6700]"
                           : "text-gray-400 hover:text-white"
                       }`}
-                      fill={liked ? "#ff6700" : "none"}
                     />
                   </Button>
-                  {isLoading && (
-                    <span className="text-[#ff6700] text-sm">Loading...</span>
+                  {(playlistName || isLoading) && (
+                    <span className="text-xs text-gray-400 truncate max-w-[80px]">
+                      {isLoading ? "Loading..." : playlistName}
+                    </span>
                   )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {error && (
-                    <span className="text-red-500 text-xs ml-2">{error}</span>
+                    <span className="text-red-600 text-xs">{error}</span>
                   )}
                 </div>
               </div>
@@ -154,37 +173,54 @@ export function MusicPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={skipBackward}
-                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!hasPreviousTrack || isLoading}
+                >
+                  <SkipBack className="h-4 w-4 text-white" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={skipBackwardSeconds}
+                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <SkipBack className="h-5 w-5 text-white" />
+                  <SkipBack className="h-4 w-4 text-white" />
                 </Button>
                 <Button
                   onClick={togglePlay}
                   disabled={
                     !currentTrack || !currentTrack.track_url || isLoading
                   }
-                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : isPlaying ? (
-                    <Pause className="h-4 w-4" />
+                    <Pause className="h-5 w-5 text-white" />
                   ) : (
-                    <Play className="h-4 w-4" />
+                    <Play className="h-5 w-5 text-white" />
                   )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={skipForward}
-                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5300] h-8 w-8 rounded-full p-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={skipForwardSeconds}
+                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <SkipForward className="h-5 w-5 text-white" />
+                  <SkipForward className="h-4 w-4 text-white" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={skipForward}
+                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!hasNextTrack || isLoading}
+                >
+                  <SkipForward className="h-4 w-4 text-white" />
                 </Button>
               </div>
-
               <div className="w-full hidden sm:flex items-center gap-2">
                 <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(currentTime)}

@@ -8,6 +8,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+interface Playlist {
+  id: string;
+  title: string;
+}
+
 interface AddToPlaylistModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,28 +28,43 @@ export function AddToPlaylistModal({
   trackId,
   userId,
 }: AddToPlaylistModalProps) {
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(
     null
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && userId) {
-      const fetchPlaylists = async () => {
-        const { data, error } = await supabase
-          .from("playlists")
-          .select("id, title")
-          .eq("user_id", userId);
-        if (error) {
-          setError("Failed to load playlists");
-        } else {
-          setPlaylists(data || []);
-        }
-      };
-      fetchPlaylists();
+    if (isOpen) {
+      // Reset state when modal opens
+      setSelectedPlaylistId(null);
+      setError(null);
+      if (userId) {
+        const fetchPlaylists = async () => {
+          const { data, error } = await supabase
+            .from("playlists")
+            .select("id, title")
+            .eq("user_id", userId);
+          if (error) {
+            setError("Failed to load playlists");
+          } else {
+            setPlaylists(data || []);
+          }
+        };
+        fetchPlaylists();
+      }
+    } else {
+      // Reset state when modal closes
+      setSelectedPlaylistId(null);
+      setError(null);
     }
   }, [isOpen, userId]);
+
+  const handleSelectPlaylist = (playlistId: string) => {
+    setSelectedPlaylistId(playlistId);
+    setError(null); // Clear error on new selection
+  };
 
   const handleAddToPlaylist = async () => {
     if (!selectedPlaylistId) {
@@ -52,8 +72,9 @@ export function AddToPlaylistModal({
       return;
     }
 
+    setIsLoading(true);
     try {
-      // Check if the track is already in the playlist to prevent duplicates
+      // Check for duplicates
       const { data: existingEntry, error: checkError } = await supabase
         .from("playlist_tracks")
         .select("id")
@@ -70,14 +91,14 @@ export function AddToPlaylistModal({
         return;
       }
 
-      // Insert the track into the playlist
+      // Insert track
       const { error: insertError } = await supabase
         .from("playlist_tracks")
         .insert({ playlist_id: selectedPlaylistId, track_id: trackId });
       if (insertError)
         throw new Error(`Failed to add track: ${insertError.message}`);
 
-      // Fetch the updated track count for the playlist
+      // Fetch updated track count
       const { count, error: countError } = await supabase
         .from("playlist_tracks")
         .select("id", { count: "exact", head: true })
@@ -85,11 +106,19 @@ export function AddToPlaylistModal({
       if (countError)
         throw new Error(`Failed to fetch track count: ${countError.message}`);
 
-      console.log(
-        `Added track ${trackId} to playlist ${selectedPlaylistId}. New track count: ${count}`
-      );
+      // Re-fetch playlists
+      const { data: updatedPlaylists, error: playlistError } = await supabase
+        .from("playlists")
+        .select("id, title")
+        .eq("user_id", userId);
+      if (playlistError) {
+        throw new Error(
+          `Failed to refresh playlists: ${playlistError.message}`
+        );
+      }
+      setPlaylists(updatedPlaylists || []);
 
-      // Call the onTrackAdded callback with the playlistId and updated track count
+      // Call callback with accurate track count
       if (onTrackAdded) {
         onTrackAdded(selectedPlaylistId, count || 0);
       }
@@ -97,6 +126,8 @@ export function AddToPlaylistModal({
     } catch (error: any) {
       console.error("Error in handleAddToPlaylist:", error.message || error);
       setError(error.message || "Failed to add track to playlist");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,7 +146,7 @@ export function AddToPlaylistModal({
           {playlists.map((playlist) => (
             <Button
               key={playlist.id}
-              onClick={() => setSelectedPlaylistId(playlist.id)}
+              onClick={() => handleSelectPlaylist(playlist.id)}
               className={`w-full text-white ${
                 selectedPlaylistId === playlist.id
                   ? "bg-[#ff6700] hover:bg-[#cc5300]"
@@ -126,18 +157,20 @@ export function AddToPlaylistModal({
             </Button>
           ))}
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex justify-center">
           <Button
             onClick={handleAddToPlaylist}
-            disabled={!selectedPlaylistId}
-            className={`w-full relative overflow-hidden text-white px-6 py-3 transition-transform duration-300 transform group ${
-              selectedPlaylistId
+            disabled={!selectedPlaylistId || isLoading}
+            className={`inline-flex items-center justify-center relative overflow-hidden text-white px-4 py-2 transition-transform duration-300 transform group ${
+              selectedPlaylistId && !isLoading
                 ? "bg-[#ff6700] hover:bg-[#cc5300] hover:scale-105"
                 : "bg-gray-600 cursor-not-allowed"
             }`}
           >
-            <span className="relative z-10">Add</span>
-            {selectedPlaylistId && (
+            <span className="relative z-10">
+              {isLoading ? "Adding..." : "Add"}
+            </span>
+            {selectedPlaylistId && !isLoading && (
               <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             )}
           </Button>

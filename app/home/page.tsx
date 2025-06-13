@@ -19,56 +19,103 @@ import { Button } from "@/components/ui/button";
 import { NavigationBar } from "@/components/navigation-bar";
 import { supabase } from "@/lib/supabaseClient";
 import { usePlayer } from "../context/PlayerContext";
-import { MusicPlayer } from "@/components/music-player";
+import MusicPlayer from "@/components/music-player";
 import { PlaylistModal } from "@/components/playlist-modal";
 import { AddToPlaylistModal } from "@/components/add-to-playlist-modal";
 import { formatDistanceToNow } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogHeader,
+} from "@/components/ui/dialog";
+
+interface Playlist {
+  id: string;
+  title: string;
+  tracks: number;
+  cover: string;
+}
+
+interface Track {
+  id: string;
+  title: string;
+  artist: string;
+  cover: string;
+  track_url: string;
+  popularity?: number;
+  duration: string;
+  plays?: string;
+  change?: string;
+  playedAt?: string;
+}
 
 export default function HomePage() {
   const [username, setUsername] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [showGreeting, setShowGreeting] = useState(false);
-  const [likedSongs, setLikedSongs] = useState<any[]>([]);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<any[]>([]);
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [likedSongs, setLikedSongs] = useState<Track[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [likedSongsPlaylistId, setLikedSongsPlaylistId] = useState<
+    string | null
+  >(null);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] =
     useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { playTrack } = usePlayer();
+  const { playTrack, toggleLike } = usePlayer();
   const router = useRouter();
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
 
-  // Function to fetch playlists (used after creating or updating playlists)
   const fetchPlaylists = async () => {
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const { data, error } = await supabase
+        const { data: playlistData, error: playlistError } = await supabase
           .from("playlists")
-          .select(
-            `
-            id,
-            title,
-            cover_url,
-            playlist_tracks (
-              count
-            )
-          `
-          )
+          .select("id, title, cover_url")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
-        if (error) throw new Error(`Playlists fetch error: ${error.message}`);
-        setPlaylists(
-          data?.map((playlist) => ({
-            id: playlist.id,
-            title: playlist.title,
-            tracks: playlist.playlist_tracks?.count || 0,
-            cover:
-              playlist.cover_url || "/placeholder.svg?height=120&width=120",
-          })) || []
+        if (playlistError)
+          throw new Error(`Playlists fetch error: ${playlistError.message}`);
+
+        const playlistsWithCounts = await Promise.all(
+          (playlistData || []).map(async (playlist) => {
+            const { count, error: countError } = await supabase
+              .from("playlist_tracks")
+              .select("id", { count: "exact", head: true })
+              .eq("playlist_id", playlist.id);
+            if (countError)
+              throw new Error(`Track count error: ${countError.message}`);
+            return {
+              id: playlist.id,
+              title: playlist.title,
+              tracks: count || 0,
+              cover:
+                playlist.cover_url ||
+                (playlist.title === "Liked Songs"
+                  ? "/liked.jpg"
+                  : "/placeholder.svg?height=120&width=120"),
+            };
+          })
+        );
+
+        setPlaylists(playlistsWithCounts);
+
+        const likedPlaylist = playlistData?.find(
+          (p) => p.title === "Liked Songs"
+        );
+        setLikedSongsPlaylistId(likedPlaylist?.id || null);
+        console.log(
+          "Fetched Liked Songs Playlist ID:",
+          likedPlaylist?.id || "Not found",
+          "Cover:",
+          likedPlaylist?.cover_url || "None"
         );
       }
     } catch (error: any) {
@@ -77,7 +124,95 @@ export default function HomePage() {
     }
   };
 
-  // Check for existing session and auth state changes
+  const fetchUserData = async () => {
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (authError) throw new Error(`Auth error: ${authError.message}`);
+      if (!user) throw new Error("No user found");
+
+      await fetchPlaylists();
+
+      const { data: liked, error: likedError } = await supabase
+        .from("liked_songs")
+        .select(
+          `
+          track_id,
+          phonk_songs (
+            id,
+            song_name,
+            song_artist,
+            album_cover_url,
+            track_url,
+            song_popularity,
+            song_duration
+          )
+        `
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (likedError)
+        throw new Error(`Liked songs fetch error: ${likedError.message}`);
+      const likedTracks =
+        liked?.map((item) => ({
+          id: item.phonk_songs.id,
+          title: item.phonk_songs.song_name,
+          artist: item.phonk_songs.song_artist,
+          cover:
+            item.phonk_songs.album_cover_url ||
+            "/placeholder.svg?height=80&width=80",
+          track_url: item.phonk_songs.track_url,
+          popularity: item.phonk_songs.song_popularity || 0,
+          duration: item.phonk_songs.song_duration?.toString() || "0",
+          plays: "0",
+          change: "0",
+        })) || [];
+      setLikedSongs(likedTracks);
+
+      const { data: recent, error: recentError } = await supabase
+        .from("recently_played")
+        .select(
+          `
+          track_id,
+          played_at,
+          duration,
+          phonk_songs (
+            id,
+            song_name,
+            song_artist,
+            album_cover_url,
+            track_url
+          )
+        `
+        )
+        .eq("user_id", user.id)
+        .order("played_at", { ascending: false })
+        .limit(5);
+      if (recentError)
+        throw new Error(`Recently played fetch error: ${recentError.message}`);
+      setRecentlyPlayed(
+        recent?.map((item) => ({
+          id: item.phonk_songs.id,
+          title: item.phonk_songs.song_name,
+          artist: item.phonk_songs.song_artist,
+          cover:
+            item.phonk_songs.album_cover_url ||
+            "/placeholder.svg?height=80&width=80",
+          track_url: item.phonk_songs.track_url,
+          playedAt: formatDistanceToNow(new Date(item.played_at), {
+            addSuffix: true,
+          }),
+          duration: item.duration.toString(),
+        })) || []
+      );
+    } catch (error: any) {
+      console.error("Error fetching user data:", error.message || error);
+      setErrorMessage("Failed to load user data. Please try again.");
+    }
+  };
+
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -129,7 +264,6 @@ export default function HomePage() {
     checkSession();
   }, []);
 
-  // Hide greeting after it's been shown once
   useEffect(() => {
     if (showGreeting) {
       sessionStorage.setItem("hasShownGreeting", "true");
@@ -137,132 +271,97 @@ export default function HomePage() {
     }
   }, [showGreeting]);
 
-  // Fetch user data, liked songs, recently played songs, and playlists on mount
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-        if (authError) throw new Error(`Auth error: ${authError.message}`);
-        if (!user) throw new Error("No user found");
-
-        // Fetch playlists
-        await fetchPlaylists();
-
-        // Fetch liked songs
-        const { data: liked, error: likedError } = await supabase
-          .from("liked_songs")
-          .select(
-            `
-            track_id,
-            phonk_songs (
-              id,
-              song_name,
-              song_artist,
-              album_cover_url,
-              track_url,
-              song_popularity,
-              song_duration
-            )
-          `
-          )
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        if (likedError)
-          throw new Error(`Liked songs fetch error: ${likedError.message}`);
-        setLikedSongs(
-          liked?.map((item) => ({
-            id: item.phonk_songs.id,
-            title: item.phonk_songs.song_name,
-            artist: item.phonk_songs.song_artist,
-            cover:
-              item.phonk_songs.album_cover_url ||
-              "/placeholder.svg?height=80&width=80",
-            track_url: item.phonk_songs.track_url,
-            popularity: item.phonk_songs.song_popularity || 0,
-            duration: item.phonk_songs.song_duration?.toString() || "0",
-            plays: "0",
-            change: "0",
-          })) || []
-        );
-
-        // Fetch recently played songs
-        const { data: recent, error: recentError } = await supabase
-          .from("recently_played")
-          .select(
-            `
-            track_id,
-            played_at,
-            duration,
-            phonk_songs (
-              id,
-              song_name,
-              song_artist,
-              album_cover_url,
-              track_url
-            )
-          `
-          )
-          .eq("user_id", user.id)
-          .order("played_at", { ascending: false })
-          .limit(5);
-        if (recentError)
-          throw new Error(
-            `Recently played fetch error: ${recentError.message}`
-          );
-        setRecentlyPlayed(
-          recent?.map((item) => ({
-            id: item.phonk_songs.id,
-            title: item.phonk_songs.song_name,
-            artist: item.phonk_songs.song_artist,
-            cover:
-              item.phonk_songs.album_cover_url ||
-              "/placeholder.svg?height=80&width=80",
-            track_url: item.phonk_songs.track_url,
-            playedAt: formatDistanceToNow(new Date(item.played_at), {
-              addSuffix: true,
-            }),
-            duration: item.duration,
-          })) || []
-        );
-      } catch (error: any) {
-        console.error("Error fetching user data:", error.message || error);
-        setErrorMessage("Failed to load user data. Please try again.");
-      }
-    };
     fetchUserData();
   }, []);
 
-  // Handle navigation
+  useEffect(() => {
+    if (userId) {
+      const playlistSubscription = supabase
+        .channel("playlist_tracks_changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "playlist_tracks",
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            fetchPlaylists();
+          }
+        )
+        .subscribe();
+
+      const likedSubscription = supabase
+        .channel("liked_songs_changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "liked_songs",
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            fetchUserData();
+            console.log("Liked songs changed, refreshing data");
+          }
+        )
+        .subscribe();
+
+      return () => {
+        playlistSubscription.unsubscribe();
+        likedSubscription.unsubscribe();
+      };
+    }
+  }, [userId]);
+
   const handleNavigation = (href: string) => {
     router.push(href);
   };
 
-  // Handle playlist deletion
   const handleDeletePlaylist = async (playlistId: string) => {
+    try {
+      const { data: playlist } = await supabase
+        .from("playlists")
+        .select("title")
+        .eq("id", playlistId)
+        .single();
+      if (playlist?.title === "Liked Songs") {
+        setErrorMessage("Cannot delete Liked Songs playlist");
+        return;
+      }
+
+      // Open confirmation dialog instead of deleting immediately
+      setPlaylistToDelete(playlistId);
+      setIsDeleteConfirmOpen(true);
+    } catch (error: any) {
+      console.error("Error checking playlist:", error.message);
+      setErrorMessage(error.message || "Failed to check playlist");
+    }
+  };
+
+  const confirmDeletePlaylist = async () => {
+    if (!playlistToDelete) return;
+
     try {
       const { error } = await supabase
         .from("playlists")
         .delete()
-        .eq("id", playlistId);
+        .eq("id", playlistToDelete);
       if (error) throw new Error(`Delete playlist error: ${error.message}`);
-      setPlaylists(playlists.filter((playlist) => playlist.id !== playlistId));
+      await fetchPlaylists();
+      setIsDeleteConfirmOpen(false);
+      setPlaylistToDelete(null);
     } catch (error: any) {
+      console.error("Error deleting playlist:", error.message);
       setErrorMessage(error.message || "Failed to delete playlist");
     }
   };
 
-  // Handle track added to playlist
-  const handleTrackAdded = (playlistId: string) => {
-    setPlaylists((prev) =>
-      prev.map((playlist) =>
-        playlist.id === playlistId
-          ? { ...playlist, tracks: playlist.tracks + 1 }
-          : playlist
-      )
-    );
+  const handleTrackAdded = async (playlistId: string) => {
+    await fetchPlaylists();
   };
 
   return (
@@ -335,14 +434,23 @@ export default function HomePage() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold">Your Playlists</h2>
-            <Button
-              onClick={() => setIsPlaylistModalOpen(true)}
-              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-            >
-              <PlaylistAdd className="mr-2 h-4 w-4" />
-              Create Playlist
-              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => setIsPlaylistModalOpen(true)}
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+              >
+                <PlaylistAdd className="mr-2 h-4 w-4" />
+                Create Playlist
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              </Button>
+              <Button
+                onClick={() => handleNavigation("/profile")}
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+              >
+                View All
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {playlists.length === 0 ? (
@@ -360,7 +468,7 @@ export default function HomePage() {
                     <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
                       <div className="relative aspect-square">
                         <Image
-                          src={playlist.cover || "/placeholder.svg"}
+                          src={playlist.cover}
                           alt={playlist.title}
                           fill
                           className="object-cover"
@@ -402,7 +510,21 @@ export default function HomePage() {
         </div>
 
         <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Your Favorites</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Your Favorites</h2>
+            {(likedSongs.length > 0 || likedSongsPlaylistId) && (
+              <Button
+                onClick={() =>
+                  handleNavigation(`/playlist/${likedSongsPlaylistId || ""}`)
+                }
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                disabled={!likedSongsPlaylistId}
+              >
+                View All
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              </Button>
+            )}
+          </div>
           {likedSongs.length === 0 ? (
             <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
               <Heart className="h-16 w-16 text-[#ff6700] mx-auto mb-4" />
@@ -414,8 +536,9 @@ export default function HomePage() {
                 href="/trending"
                 onClick={() => handleNavigation("/trending")}
               >
-                <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
+                <Button className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3">
                   Discover Music
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                 </Button>
               </Link>
             </div>
@@ -540,8 +663,10 @@ export default function HomePage() {
                           {track.artist}
                         </p>
                         <p className="text-sm text-gray-400">
-                          {Math.floor(track.duration / 60)}:
-                          {(track.duration % 60).toString().padStart(2, "0")}
+                          {Math.floor(parseInt(track.duration) / 60)}:
+                          {(parseInt(track.duration) % 60)
+                            .toString()
+                            .padStart(2, "0")}
                         </p>
                         <p className="text-sm text-gray-400">
                           {track.playedAt}
@@ -602,13 +727,45 @@ export default function HomePage() {
         }}
         userId={userId}
       />
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-400">
+              Are you sure you want to delete this playlist? This action cannot
+              be undone.
+            </p>
+          </div>
+          <div className="flex justify-center gap-4 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteConfirmOpen(false);
+                setPlaylistToDelete(null);
+              }}
+              className="w-auto px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeletePlaylist}
+              className="relative overflow-hidden w-auto px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
+            >
+              Delete
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <AddToPlaylistModal
         isOpen={isAddToPlaylistModalOpen}
         onClose={() => {
           setIsAddToPlaylistModalOpen(false);
           setSelectedTrackId(null);
         }}
-        onTrackAdded={handleTrackAdded} // New prop to handle track addition
+        onTrackAdded={handleTrackAdded}
         trackId={selectedTrackId || ""}
         userId={userId}
       />
