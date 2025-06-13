@@ -45,9 +45,19 @@ interface Track {
   track_url: string;
   popularity?: number;
   duration: string;
-  plays?: string;
+  plays: string;
   change?: string;
   playedAt?: string;
+}
+
+interface PhonkSong {
+  id: string;
+  song_name: string;
+  song_artist: string;
+  album_cover_url: string | null;
+  track_url: string;
+  song_popularity: number | null;
+  song_duration: number | null;
 }
 
 export default function HomePage() {
@@ -69,6 +79,7 @@ export default function HomePage() {
   const router = useRouter();
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchPlaylists = async () => {
     try {
@@ -76,36 +87,66 @@ export default function HomePage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
+        // Fetch recently played track IDs for the user
+        const { data: recentTracks, error: recentError } = await supabase
+          .from("recently_played")
+          .select("track_id")
+          .eq("user_id", user.id)
+          .order("played_at", { ascending: false });
+        if (recentError)
+          throw new Error(`Recent tracks fetch error: ${recentError.message}`);
+
+        const recentTrackIds =
+          recentTracks?.map((track) => track.track_id) || [];
+
+        // Fetch playlists with tracks in recently_played
         const { data: playlistData, error: playlistError } = await supabase
           .from("playlists")
-          .select("id, title, cover_url")
+          .select(
+            `
+          id,
+          title,
+          cover_url,
+          playlist_tracks (
+            track_id
+          )
+        `
+          )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         if (playlistError)
           throw new Error(`Playlists fetch error: ${playlistError.message}`);
 
-        const playlistsWithCounts = await Promise.all(
-          (playlistData || []).map(async (playlist) => {
-            const { count, error: countError } = await supabase
-              .from("playlist_tracks")
-              .select("id", { count: "exact", head: true })
-              .eq("playlist_id", playlist.id);
-            if (countError)
-              throw new Error(`Track count error: ${countError.message}`);
-            return {
-              id: playlist.id,
-              title: playlist.title,
-              tracks: count || 0,
-              cover:
-                playlist.cover_url ||
-                (playlist.title === "Liked Songs"
-                  ? "/liked.jpg"
-                  : "/placeholder.svg?height=120&width=120"),
-            };
-          })
+        // Filter playlists with recently played tracks and limit to 5
+        const filteredPlaylists = await Promise.all(
+          (playlistData || [])
+            .filter((playlist) =>
+              playlist.playlist_tracks.some((track: { track_id: string }) =>
+                recentTrackIds.includes(track.track_id)
+              )
+            )
+            .slice(0, 5) // Limit to 5 playlists
+            .map(async (playlist) => {
+              const { count, error: countError } = await supabase
+                .from("playlist_tracks")
+                .select("id", { count: "exact", head: true })
+                .eq("playlist_id", playlist.id);
+              if (countError)
+                throw new Error(`Track count error: ${countError.message}`);
+              return {
+                id: playlist.id,
+                title: playlist.title,
+                tracks: count || 0,
+                cover:
+                  playlist.cover_url ||
+                  (playlist.title === "Liked Songs"
+                    ? "/liked.jpg"
+                    : "/placeholder.svg?height=120&width=120"),
+              };
+            })
         );
 
-        setPlaylists(playlistsWithCounts);
+        setPlaylists(filteredPlaylists);
 
         const likedPlaylist = playlistData?.find(
           (p) => p.title === "Liked Songs"
@@ -135,76 +176,95 @@ export default function HomePage() {
 
       await fetchPlaylists();
 
+      // Fetch liked songs
       const { data: liked, error: likedError } = await supabase
         .from("liked_songs")
         .select(
           `
-          track_id,
-          phonk_songs (
-            id,
-            song_name,
-            song_artist,
-            album_cover_url,
-            track_url,
-            song_popularity,
-            song_duration
-          )
-        `
+    track_id,
+    phonk_songs (
+      id,
+      song_name,
+      song_artist,
+      album_cover_url,
+      track_url,
+      song_popularity,
+      song_duration
+    )
+  `
         )
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .returns<
+          {
+            track_id: string;
+            phonk_songs: PhonkSong;
+          }[]
+        >();
       if (likedError)
         throw new Error(`Liked songs fetch error: ${likedError.message}`);
-      const likedTracks =
+      setLikedSongs(
         liked?.map((item) => ({
-          id: item.phonk_songs.id,
-          title: item.phonk_songs.song_name,
-          artist: item.phonk_songs.song_artist,
+          id: item.phonk_songs.id.toString(),
+          title: item.phonk_songs.song_name || "Unknown Title",
+          artist: item.phonk_songs.song_artist || "Unknown Artist",
+          duration: item.phonk_songs.song_duration?.toString() || "0",
+          plays: "0",
           cover:
             item.phonk_songs.album_cover_url ||
             "/placeholder.svg?height=80&width=80",
-          track_url: item.phonk_songs.track_url,
-          popularity: item.phonk_songs.song_popularity || 0,
-          duration: item.phonk_songs.song_duration?.toString() || "0",
-          plays: "0",
           change: "0",
-        })) || [];
-      setLikedSongs(likedTracks);
+          popularity: item.phonk_songs.song_popularity || 0,
+          track_url: item.phonk_songs.track_url || "",
+        })) || []
+      );
 
+      // Fetch recently played songs
       const { data: recent, error: recentError } = await supabase
         .from("recently_played")
         .select(
           `
-          track_id,
-          played_at,
-          duration,
-          phonk_songs (
-            id,
-            song_name,
-            song_artist,
-            album_cover_url,
-            track_url
-          )
-        `
+    track_id,
+    played_at,
+    phonk_songs (
+      id,
+      song_name,
+      song_artist,
+      album_cover_url,
+      track_url,
+      song_popularity,
+      song_duration
+    )
+  `
         )
         .eq("user_id", user.id)
         .order("played_at", { ascending: false })
-        .limit(5);
+        .limit(5)
+        .returns<
+          {
+            track_id: string;
+            played_at: string;
+            phonk_songs: PhonkSong;
+          }[]
+        >();
       if (recentError)
         throw new Error(`Recently played fetch error: ${recentError.message}`);
       setRecentlyPlayed(
         recent?.map((item) => ({
-          id: item.phonk_songs.id,
-          title: item.phonk_songs.song_name,
-          artist: item.phonk_songs.song_artist,
+          id: item.phonk_songs.id.toString(),
+          title: item.phonk_songs.song_name || "Unknown Title",
+          artist: item.phonk_songs.song_artist || "Unknown Artist",
+          duration: item.phonk_songs.song_duration?.toString() || "0", // Use song_duration
+          plays: "0",
           cover:
             item.phonk_songs.album_cover_url ||
             "/placeholder.svg?height=80&width=80",
-          track_url: item.phonk_songs.track_url,
+          change: "0",
+          popularity: item.phonk_songs.song_popularity || 0,
+          track_url: item.phonk_songs.track_url || "",
           playedAt: formatDistanceToNow(new Date(item.played_at), {
             addSuffix: true,
           }),
-          duration: item.duration.toString(),
         })) || []
       );
     } catch (error: any) {
@@ -395,6 +455,33 @@ export default function HomePage() {
           </div>
         )}
 
+        {successMessage && (
+          <div className="bg-green-500/20 border border-green-500 text-green-500 p-4 rounded-md mb-4 flex items-center justify-between">
+            <span>{successMessage}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-green-500 hover:text-green-400"
+              onClick={() => setSuccessMessage(null)}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </Button>
+          </div>
+        )}
+
         {showGreeting && username && (
           <div className="mb-10">
             <h1 className="text-3xl font-bold text-[#ff6700]">
@@ -414,7 +501,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent flex items-center">
             <div className="p-8">
               <div className="text-sm font-medium text-[#ff6700] mb-2">
-                Featured Playlist
+                Featured Phonkit
               </div>
               <h1 className="text-4xl font-bold mb-4">Phonk Essentials</h1>
               <p className="text-gray-300 mb-6 max-w-md">
@@ -433,14 +520,14 @@ export default function HomePage() {
 
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Your Playlists</h2>
+            <h2 className="text-2xl font-bold">Your Phonkits</h2>
             <div className="flex gap-4">
               <Button
                 onClick={() => setIsPlaylistModalOpen(true)}
                 className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
               >
                 <PlaylistAdd className="mr-2 h-4 w-4" />
-                Create Playlist
+                Create a Phonkit
                 <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
               </Button>
               <Button
@@ -600,7 +687,7 @@ export default function HomePage() {
           )}
         </div>
 
-        <div className="mb-12">
+        <div className="mb-20">
           <h2 className="text-2xl font-bold mb-6">Recently Played</h2>
           {recentlyPlayed.length === 0 ? (
             <div className="bg-[#0f0f0f] rounded-xl border border-gray-600 p-8 text-center">
@@ -614,8 +701,9 @@ export default function HomePage() {
                 href="/trending"
                 onClick={() => handleNavigation("/trending")}
               >
-                <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
+                <Button className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3">
                   Discover Music
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                 </Button>
               </Link>
             </div>
@@ -722,18 +810,24 @@ export default function HomePage() {
       <PlaylistModal
         isOpen={isPlaylistModalOpen}
         onClose={() => setIsPlaylistModalOpen(false)}
-        onPlaylistCreated={() => {
-          fetchPlaylists();
+        onPlaylistCreated={async () => {
+          await fetchPlaylists();
+          setSuccessMessage(
+            "Your Phonkit has been created, add songs to view it"
+          );
         }}
         userId={userId}
       />
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
+        <DialogContent
+          className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800"
+          aria-describedby="delete-playlist-description"
+        >
           <DialogHeader>
             <DialogTitle>Are you sure?</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-gray-400">
+            <p id="delete-playlist-description" className="text-gray-400">
               Are you sure you want to delete this playlist? This action cannot
               be undone.
             </p>

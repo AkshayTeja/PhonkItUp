@@ -28,12 +28,22 @@ interface Song {
   song_name: string;
   song_artist: string | null;
   album_cover_url: string | null;
+  type: "song";
 }
+
+interface Playlist {
+  id: string;
+  title: string;
+  cover_url: string | null;
+  type: "playlist";
+}
+
+type SearchResult = Song | Playlist;
 
 export function NavigationBar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Song[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const pathname = usePathname();
 
   // Fetch search results from Supabase
@@ -44,19 +54,58 @@ export function NavigationBar() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("phonk_songs")
-        .select("id, song_name, song_artist, album_cover_url")
-        .or(
-          `song_name.ilike.%${searchQuery}%,song_artist.ilike.%${searchQuery}%`
-        )
-        .limit(10);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          console.error("No user found");
+          setSearchResults([]);
+          return;
+        }
 
-      if (error) {
+        // Fetch songs
+        const { data: songsData, error: songsError } = await supabase
+          .from("phonk_songs")
+          .select("id, song_name, song_artist, album_cover_url")
+          .or(
+            `song_name.ilike.%${searchQuery}%,song_artist.ilike.%${searchQuery}%`
+          )
+          .limit(5);
+
+        if (songsError) {
+          console.error("Error fetching songs:", songsError);
+        }
+
+        // Fetch playlists
+        const { data: playlistsData, error: playlistsError } = await supabase
+          .from("playlists")
+          .select("id, title, cover_url")
+          .eq("user_id", user.id)
+          .ilike("title", `%${searchQuery}%`)
+          .limit(5);
+
+        if (playlistsError) {
+          console.error("Error fetching phonkits:", playlistsError);
+        }
+
+        // Combine results
+        const songsResults: Song[] = (songsData || []).map((song) => ({
+          ...song,
+          type: "song",
+        }));
+
+        const playlistsResults: Playlist[] = (playlistsData || []).map(
+          (playlist) => ({
+            ...playlist,
+            type: "playlist",
+          })
+        );
+
+        setSearchResults([...songsResults, ...playlistsResults]);
+      } catch (error) {
         console.error("Error fetching search results:", error);
         setSearchResults([]);
-      } else {
-        setSearchResults(data || []);
       }
     };
 
@@ -118,33 +167,57 @@ export function NavigationBar() {
             <div className="hidden md:block relative w-64">
               <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search tracks, artists..."
+                placeholder="Search tracks, artists or phonkits"
                 className="pl-8 bg-gray-900 border-gray-700"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchResults.length > 0 && (
                 <div className="absolute top-full mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                  {searchResults.map((song) => (
+                  {searchResults.map((result) => (
                     <Link
-                      key={song.id}
-                      href={`/vault?song=${encodeURIComponent(song.song_name)}`}
+                      key={`${result.type}-${result.id}`}
+                      href={
+                        result.type === "song"
+                          ? `/vault?song=${encodeURIComponent(
+                              result.song_name
+                            )}`
+                          : `/playlist/${result.id}`
+                      }
                       className="flex items-center p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0"
                       onClick={() => setSearchQuery("")}
                     >
-                      {song.album_cover_url && (
+                      {(result.type === "song"
+                        ? result.album_cover_url
+                        : result.cover_url) && (
                         <img
-                          src={song.album_cover_url}
-                          alt={song.song_name}
+                          src={
+                            result.type === "song"
+                              ? result.album_cover_url!
+                              : result.cover_url ||
+                                "/placeholder.svg?height=40&width=40"
+                          }
+                          alt={
+                            result.type === "song"
+                              ? result.song_name
+                              : result.title
+                          }
                           className="h-10 w-10 object-cover rounded mr-3"
                         />
                       )}
                       <div>
                         <div className="font-medium text-white">
-                          {song.song_name}
+                          {result.type === "song"
+                            ? result.song_name
+                            : result.title}
+                          <span className="ml-2 text-xs text-gray-500">
+                            {result.type === "playlist" ? "[Phonkit]" : ""}
+                          </span>
                         </div>
                         <div className="text-sm text-gray-400">
-                          {song.song_artist || "Unknown Artist"}
+                          {result.type === "song"
+                            ? result.song_artist || "Unknown Artist"
+                            : "Your Phonkit"}
                         </div>
                       </div>
                     </Link>
@@ -237,7 +310,7 @@ export function NavigationBar() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search tracks, artists..."
+              placeholder="Search tracks, artists or phonkits"
               className="pl-9 bg-gray-900 border-gray-700"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -256,29 +329,51 @@ export function NavigationBar() {
             </Button>
             {searchResults.length > 0 && (
               <div className="absolute top-full mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">
-                {searchResults.map((song) => (
+                {searchResults.map((result) => (
                   <Link
-                    key={song.id}
-                    href={`/vault?song=${encodeURIComponent(song.song_name)}`}
+                    key={`${result.type}-${result.id}`}
+                    href={
+                      result.type === "song"
+                        ? `/vault?song=${encodeURIComponent(result.song_name)}`
+                        : `/playlist/${result.id}`
+                    }
                     className="flex items-center p-3 hover:bg-gray-800 border-b border-gray-800 last:border-0"
                     onClick={() => {
                       setIsSearchOpen(false);
                       setSearchQuery("");
                     }}
                   >
-                    {song.album_cover_url && (
+                    {(result.type === "song"
+                      ? result.album_cover_url
+                      : result.cover_url) && (
                       <img
-                        src={song.album_cover_url}
-                        alt={song.song_name}
+                        src={
+                          result.type === "song"
+                            ? result.album_cover_url!
+                            : result.cover_url ||
+                              "/placeholder.svg?height=40&width=40"
+                        }
+                        alt={
+                          result.type === "song"
+                            ? result.song_name
+                            : result.title
+                        }
                         className="h-10 w-10 object-cover rounded mr-3"
                       />
                     )}
                     <div>
                       <div className="font-medium text-white">
-                        {song.song_name}
+                        {result.type === "song"
+                          ? result.song_name
+                          : result.title}
+                        <span className="ml-2 text-xs text-gray-500">
+                          {result.type === "playlist" ? "[Playlist]" : ""}
+                        </span>
                       </div>
                       <div className="text-sm text-gray-400">
-                        {song.song_artist || "Unknown Artist"}
+                        {result.type === "song"
+                          ? result.song_artist || "Unknown Artist"
+                          : "Your Phonkit"}
                       </div>
                     </div>
                   </Link>

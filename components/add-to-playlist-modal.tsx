@@ -135,7 +135,7 @@ export function AddToPlaylistModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-[#0f0f0f] text-white">
         <DialogHeader>
-          <DialogTitle>Add to Playlist</DialogTitle>
+          <DialogTitle>Add to Phonkit</DialogTitle>
         </DialogHeader>
         {error && (
           <div className="bg-red-500/20 border border-red-500 text-red-500 p-4 rounded-md mb-4">

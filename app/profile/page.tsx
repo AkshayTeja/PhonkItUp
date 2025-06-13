@@ -1,6 +1,8 @@
 "use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Settings,
   Music,
@@ -52,12 +54,39 @@ interface Track {
   playedAt?: string;
 }
 
+interface PhonkSong {
+  id: string;
+  song_name: string;
+  song_artist: string;
+  album_cover_url: string | null;
+  track_url: string;
+  song_popularity: number | null;
+  song_duration: number | null;
+}
+
+interface RecentlyPlayedResponse {
+  track_id: string;
+  played_at: string;
+  phonk_songs: PhonkSong;
+}
+
+interface LikedSongsResponse {
+  track_id: string;
+  phonk_songs: PhonkSong;
+}
+
+interface ProfileData {
+  name: string | null;
+  profile_picture: string | null;
+  wallpaper: string | null;
+}
+
 export default function ProfilePage() {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [profilePic, setProfilePic] = useState("/profilepic.jpg");
-  const [wallpaper, setWallpaper] = useState("/profilewallpaper.jpg");
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [name, setName] = useState<string>("");
+  const [username, setUsername] = useState<string>("");
+  const [profilePic, setProfilePic] = useState<string>("/profilepic.jpg");
+  const [wallpaper, setWallpaper] = useState<string>("/profilewallpaper.jpg");
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [wallpaperFile, setWallpaperFile] = useState<File | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -65,10 +94,14 @@ export default function ProfilePage() {
   const [likedSongs, setLikedSongs] = useState<Track[]>([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState<Track[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] =
+    useState<boolean>(false);
   const { playTrack } = usePlayer();
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] =
+    useState<boolean>(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<string | null>(null);
+  const [playlistCount, setPlaylistCount] = useState<number>(0);
+  const router = useRouter();
 
   const fetchPlaylists = async () => {
     try {
@@ -81,8 +114,12 @@ export default function ProfilePage() {
           .select("id, title, cover_url")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
-        if (playlistError)
+        if (playlistError) {
+          console.error("Playlist fetch error:", playlistError);
           throw new Error(`Playlists fetch error: ${playlistError.message}`);
+        }
+
+        setPlaylistCount(playlistData?.length || 0);
 
         const playlistsWithCounts = await Promise.all(
           (playlistData || []).map(async (playlist) => {
@@ -90,8 +127,10 @@ export default function ProfilePage() {
               .from("playlist_tracks")
               .select("id", { count: "exact", head: true })
               .eq("playlist_id", playlist.id);
-            if (countError)
+            if (countError) {
+              console.error("Track count error:", countError);
               throw new Error(`Track count error: ${countError.message}`);
+            }
             return {
               id: playlist.id,
               title: playlist.title,
@@ -113,7 +152,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Fetch user data, liked songs, recently played, and playlists on mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -121,20 +159,25 @@ export default function ProfilePage() {
           data: { user },
           error: authError,
         } = await supabase.auth.getUser();
-        if (authError) throw new Error(`Auth error: ${authError.message}`);
-        if (!user) throw new Error("No user found");
+        if (authError) {
+          console.error("Auth error:", authError);
+          throw new Error(`Auth error: ${authError.message}`);
+        }
+        if (!user) {
+          console.error("No user found in auth.getUser()");
+          router.push("/login");
+          throw new Error("No user found");
+        }
+
+        console.log("Authenticated user:", { id: user.id, email: user.email });
 
         setUserId(user.id);
-        // Fetch full name from user_metadata
         const fullName = user.user_metadata?.full_name || "New User";
-
-        // Fetch display name (username) from user_metadata or generate a unique one
         const displayName =
           user.user_metadata?.display_name || `user_${user.id.slice(0, 8)}`;
         setUsername(displayName);
         setName(fullName);
 
-        // Fetch profile data
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("name, profile_picture, wallpaper")
@@ -142,18 +185,21 @@ export default function ProfilePage() {
           .single();
 
         if (profileError && profileError.code !== "PGRST116") {
+          console.error("Profile fetch error:", profileError);
           throw new Error(`Profile fetch error: ${profileError.message}`);
         }
 
         if (profile) {
+          console.log("Profile data:", profile);
           setName(
             fullName !== "New User" ? fullName : profile.name || fullName
           );
           setProfilePic(profile.profile_picture || "/profilepic.jpg");
           setWallpaper(profile.wallpaper || "/profilewallpaper.jpg");
+        } else {
+          console.log("No profile data found for user:", user.id);
         }
 
-        // Fetch liked songs
         const { data: liked, error: likedError } = await supabase
           .from("liked_songs")
           .select(
@@ -171,9 +217,13 @@ export default function ProfilePage() {
           `
           )
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        if (likedError)
+          .order("created_at", { ascending: false })
+          .returns<LikedSongsResponse[]>();
+        if (likedError) {
+          console.error("Liked songs fetch error:", likedError);
           throw new Error(`Liked songs fetch error: ${likedError.message}`);
+        }
+        console.log("Liked songs data:", liked);
         setLikedSongs(
           liked?.map((item) => ({
             id: item.phonk_songs.id.toString(),
@@ -190,37 +240,40 @@ export default function ProfilePage() {
           })) || []
         );
 
-        // Fetch recently played songs
         const { data: recent, error: recentError } = await supabase
           .from("recently_played")
           .select(
             `
             track_id,
             played_at,
-            duration,
             phonk_songs (
               id,
               song_name,
               song_artist,
               album_cover_url,
               track_url,
-              song_popularity
+              song_popularity,
+              song_duration
             )
           `
           )
           .eq("user_id", user.id)
           .order("played_at", { ascending: false })
-          .limit(5);
-        if (recentError)
+          .limit(5)
+          .returns<RecentlyPlayedResponse[]>();
+        if (recentError) {
+          console.error("Recently played fetch error:", recentError);
           throw new Error(
             `Recently played fetch error: ${recentError.message}`
           );
+        }
+        console.log("Recently played data:", recent);
         setRecentlyPlayed(
           recent?.map((item) => ({
             id: item.phonk_songs.id.toString(),
             title: item.phonk_songs.song_name || "Unknown Title",
             artist: item.phonk_songs.song_artist || "Unknown Artist",
-            duration: item.duration?.toString() || "0",
+            duration: item.phonk_songs.song_duration?.toString() || "0",
             plays: "0",
             cover:
               item.phonk_songs.album_cover_url ||
@@ -234,17 +287,16 @@ export default function ProfilePage() {
           })) || []
         );
 
-        // Fetch playlists
         await fetchPlaylists();
       } catch (error: any) {
         console.error("Error fetching user data:", error.message || error);
         setErrorMessage("Failed to load user data. Please try again.");
       }
     };
-    fetchUserData();
-  }, []);
 
-  // Real-time subscription for playlists
+    fetchUserData();
+  }, [router]);
+
   useEffect(() => {
     if (userId) {
       const playlistSubscription = supabase
@@ -258,6 +310,7 @@ export default function ProfilePage() {
             filter: `user_id=eq.${userId}`,
           },
           () => {
+            console.log("Playlist tracks changed, refreshing playlists");
             fetchPlaylists();
           }
         )
@@ -273,6 +326,7 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw new Error(`Logout error: ${error.message}`);
+      router.push("/login");
     } catch (error: any) {
       console.error("Error logging out:", error.message || error);
       setErrorMessage("Failed to log out. Please try again.");
@@ -291,7 +345,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Open confirmation dialog instead of deleting immediately
       setPlaylistToDelete(playlistId);
       setIsDeleteConfirmOpen(true);
     } catch (error: any) {
@@ -322,7 +375,6 @@ export default function ProfilePage() {
     try {
       if (!userId) throw new Error("No user ID found");
 
-      // Validate inputs
       if (!username.trim()) throw new Error("Username cannot be empty");
       if (profilePicFile && profilePicFile.size > 5 * 1024 * 1024) {
         throw new Error("Profile picture must be less than 5MB");
@@ -336,7 +388,6 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString(),
       };
 
-      // Update display name in auth
       const {
         data: { user },
         error: authError,
@@ -349,7 +400,6 @@ export default function ProfilePage() {
         if (error) throw new Error(`Auth update error: ${error.message}`);
       }
 
-      // Handle profile picture upload
       if (profilePicFile) {
         const fileExt = profilePicFile.name.split(".").pop()?.toLowerCase();
         if (!["jpg", "jpeg", "png", "gif"].includes(fileExt || "")) {
@@ -373,7 +423,6 @@ export default function ProfilePage() {
         setProfilePic(publicUrlData.publicUrl);
       }
 
-      // Handle wallpaper upload
       if (wallpaperFile) {
         const fileExt = wallpaperFile.name.split(".").pop()?.toLowerCase();
         if (!["jpg", "jpeg", "png", "gif"].includes(fileExt || "")) {
@@ -395,7 +444,6 @@ export default function ProfilePage() {
         setWallpaper(publicUrlData.publicUrl);
       }
 
-      // Update profile in Supabase
       const { error } = await supabase
         .from("profiles")
         .upsert({ id: userId, ...updates }, { onConflict: "id" })
@@ -418,6 +466,10 @@ export default function ProfilePage() {
       });
       setErrorMessage(message);
     }
+  };
+
+  const handleNavigation = (href: string) => {
+    router.push(href);
   };
 
   return (
@@ -470,7 +522,7 @@ export default function ProfilePage() {
               <div className="ml-4 mb-4">
                 <h1 className="text-3xl font-bold">{name || username}</h1>
                 <p className="text-gray-400">
-                  @{username} • 42 Playlists • 128 Followers
+                  @{username} • {playlistCount} Phonkits
                 </p>
               </div>
             </div>
@@ -481,7 +533,7 @@ export default function ProfilePage() {
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Profile
-                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
               </Button>
               <Link
                 href="/login"
@@ -489,12 +541,11 @@ export default function ProfilePage() {
                 className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
               >
                 <span className="relative z-10 flex items-center">Logout</span>
-                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
               </Link>
             </div>
           </div>
 
-          {/* Edit Profile Modal */}
           <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
             <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
               <DialogHeader>
@@ -506,7 +557,9 @@ export default function ProfilePage() {
                   <Input
                     id="name"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setName(e.target.value)
+                    }
                     className="bg-gray-900 border-gray-800 text-white"
                   />
                 </div>
@@ -515,7 +568,9 @@ export default function ProfilePage() {
                   <Input
                     id="username"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setUsername(e.target.value)
+                    }
                     className="bg-gray-900 border-gray-800 text-white"
                   />
                 </div>
@@ -526,7 +581,7 @@ export default function ProfilePage() {
                       id="profilePic"
                       type="file"
                       accept="image/*"
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setProfilePicFile(e.target.files?.[0] || null)
                       }
                       className="hidden"
@@ -550,7 +605,7 @@ export default function ProfilePage() {
                       id="wallpaper"
                       type="file"
                       accept="image/*"
-                      onChange={(e) =>
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         setWallpaperFile(e.target.files?.[0] || null)
                       }
                       className="hidden"
@@ -585,13 +640,13 @@ export default function ProfilePage() {
                   className="relative overflow-hidden w-auto px-4 bg-[#ff6700] hover:bg-[#cc5300] text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
                 >
                   Save Changes
-                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
                 </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          <div className="mt-20">
+          <div className="mt-20 mb-20">
             <Tabs defaultValue="playlists" className="mb-10">
               <TabsList className="bg-gray-900 border border-gray-800">
                 <TabsTrigger
@@ -599,7 +654,7 @@ export default function ProfilePage() {
                   className="data-[state=active]:bg-[#ff6700] text-white"
                 >
                   <Music className="mr-2 h-4 w-4" />
-                  Playlists
+                  Phonkits
                 </TabsTrigger>
                 <TabsTrigger
                   value="recent"
@@ -619,14 +674,14 @@ export default function ProfilePage() {
 
               <TabsContent value="playlists" className="mt-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Your Playlists</h2>
+                  <h2 className="text-2xl font-bold">Your Phonkits</h2>
                   <Button
                     onClick={() => setIsPlaylistModalOpen(true)}
                     className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
                   >
                     <PlaylistAdd className="mr-2 h-4 w-4" />
-                    Create Playlist
-                    <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                    Create a Phonkit
+                    <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -640,6 +695,9 @@ export default function ProfilePage() {
                         <Link
                           href={`/playlist/${playlist.id}`}
                           className="block"
+                          onClick={() =>
+                            handleNavigation(`/playlist/${playlist.id}`)
+                          }
                         >
                           <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
                             <div className="relative aspect-square">
@@ -685,7 +743,7 @@ export default function ProfilePage() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="recent" className="mt-6">
+              <TabsContent value="recent" className="mt-6 mb-20">
                 <h2 className="text-2xl font-bold mb-6">Recently Played</h2>
                 {recentlyPlayed.length === 0 ? (
                   <div className="bg-[#0f0f0f] rounded-xl border border-gray-600 p-8 text-center">
@@ -696,7 +754,10 @@ export default function ProfilePage() {
                     <p className="text-gray-400 mb-6">
                       Play some tracks to see them here
                     </p>
-                    <Link href="/home">
+                    <Link
+                      href="/home"
+                      onClick={() => handleNavigation("/home")}
+                    >
                       <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
                         Discover Music
                       </Button>
@@ -751,7 +812,7 @@ export default function ProfilePage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="liked" className="mt-6">
+              <TabsContent value="liked" className="mt-6 mb-20">
                 <h2 className="text-2xl font-bold mb-6">Liked Tracks</h2>
                 {likedSongs.length === 0 ? (
                   <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
@@ -762,7 +823,10 @@ export default function ProfilePage() {
                     <p className="text-gray-400 mb-6">
                       Start liking tracks to see them here
                     </p>
-                    <Link href="/home">
+                    <Link
+                      href="/home"
+                      onClick={() => handleNavigation("/home")}
+                    >
                       <Button className="bg-[#ff6700] hover:bg-[#cc5300]">
                         Discover Music
                       </Button>
@@ -821,6 +885,7 @@ export default function ProfilePage() {
           isOpen={isPlaylistModalOpen}
           onClose={() => setIsPlaylistModalOpen(false)}
           onPlaylistCreated={() => {
+            console.log("Playlist created, refreshing playlists");
             fetchPlaylists();
           }}
           userId={userId}
@@ -853,7 +918,7 @@ export default function ProfilePage() {
               className="relative overflow-hidden w-auto px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
             >
               Delete
-              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
             </Button>
           </div>
         </DialogContent>

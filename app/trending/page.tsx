@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Play, TrendingUp } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NavigationBar } from "@/components/navigation-bar";
 import { usePlayer } from "../context/PlayerContext"; // Import player context
 import { supabase } from "@/lib/supabaseClient";
@@ -21,17 +19,9 @@ interface Track {
   track_url: string;
 }
 
-interface Artist {
-  name: string;
-  popularity: number;
-  cover: string;
-  followers: string;
-}
-
 export default function TrendingPage() {
-  const [trendingArtists, setTrendingArtists] = useState<Artist[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [topTracks, setTopTracks] = useState<Track[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const { playTrack } = usePlayer(); // Use context to control player
 
   useEffect(() => {
@@ -41,7 +31,7 @@ export default function TrendingPage() {
   const fetchData = async (): Promise<void> => {
     setLoading(true);
     try {
-      await Promise.all([fetchTopTracks(), fetchTrendingArtists()]);
+      await fetchTopTracks();
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -55,19 +45,40 @@ export default function TrendingPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formatPlays = (popularity: number): string => {
-    if (popularity > 90) return `${(popularity * 15).toFixed(1)}M`;
-    if (popularity > 70) return `${(popularity * 12).toFixed(0)}K`;
-    if (popularity > 50) return `${(popularity * 8).toFixed(0)}K`;
-    return `${(popularity * 5).toFixed(0)}K`;
+  const formatPlays = (plays: number): string => {
+    if (plays >= 1000000) return `${(plays / 1000000).toFixed(1)}M`;
+    if (plays >= 1000) return `${(plays / 1000).toFixed(0)}K`;
+    return `${plays}`;
   };
 
   const fetchTopTracks = async (): Promise<void> => {
     const { data, error } = await supabase
       .from("phonk_songs")
-      .select("*")
-      .order("song_popularity", { ascending: false })
-      .limit(5);
+      .select(
+        `
+        id,
+        song_name,
+        song_artist,
+        song_duration,
+        album_cover_url,
+        song_popularity,
+        track_url,
+        recently_played:recently_played!left(count)
+      `
+      )
+      .returns<
+        Array<{
+          id: number;
+          song_name: string;
+          song_artist: string;
+          song_duration: number;
+          album_cover_url: string | null;
+          song_popularity: number;
+          track_url: string;
+          recently_played: Array<{ count: number }>;
+        }>
+      >()
+      .limit(10, { foreignTable: undefined });
 
     if (error) {
       console.error("Error fetching top tracks:", error.message);
@@ -75,54 +86,38 @@ export default function TrendingPage() {
     }
 
     if (data) {
-      const formattedTracks: Track[] = data.map(
-        (track: any, index: number) => ({
+      const formattedTracks: Track[] = data
+        .map((track, index) => ({
           id: track.id,
           title: track.song_name,
           artist: track.song_artist,
           duration: formatDuration(track.song_duration),
-          plays: formatPlays(track.song_popularity),
+          plays: formatPlays(track.recently_played[0]?.count || 0),
           cover: track.album_cover_url || "/placeholder.svg?height=80&width=80",
           change: `+${Math.floor(Math.random() * 20) + 1}`,
           popularity: track.song_popularity,
           track_url: track.track_url,
+        }))
+        .sort((a, b) => {
+          const playsA =
+            parseFloat(a.plays.replace(/[KM]/, "")) *
+            (a.plays.endsWith("M")
+              ? 1000000
+              : a.plays.endsWith("K")
+              ? 1000
+              : 1);
+          const playsB =
+            parseFloat(b.plays.replace(/[KM]/, "")) *
+            (b.plays.endsWith("M")
+              ? 1000000
+              : b.plays.endsWith("K")
+              ? 1000
+              : 1);
+          return playsB - playsA; // Sort by actual play count descending
         })
-      );
+        .slice(0, 10); // Ensure we only take top 10 after sorting
 
       setTopTracks(formattedTracks);
-    }
-  };
-
-  const fetchTrendingArtists = async (): Promise<void> => {
-    const { data, error } = await supabase
-      .from("phonk_songs")
-      .select("song_artist, song_popularity, album_cover_url")
-      .order("song_popularity", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching trending artists:", error);
-      return;
-    }
-
-    if (data) {
-      const artistMap = new Map<string, Artist>();
-      data.forEach((track: any) => {
-        if (
-          !artistMap.has(track.song_artist) ||
-          artistMap.get(track.song_artist)!.popularity < track.song_popularity
-        ) {
-          artistMap.set(track.song_artist, {
-            name: track.song_artist,
-            popularity: track.song_popularity,
-            cover:
-              track.album_cover_url || "/placeholder.svg?height=120&width=120",
-            followers: formatPlays(track.song_popularity * 10),
-          });
-        }
-      });
-
-      const artists: Artist[] = Array.from(artistMap.values()).slice(0, 5);
-      setTrendingArtists(artists);
     }
   };
 
@@ -177,13 +172,13 @@ export default function TrendingPage() {
           >
             <div className="col-span-1 text-gray-400">{index + 1}</div>
             <div className="col-span-5 flex items-center">
-              <div className="relative group">
+              <div className="relative group w-[40px] h-[40px]">
                 <Image
                   src={track.cover}
                   alt={track.title}
                   width={40}
                   height={40}
-                  className="rounded mr-3"
+                  className="rounded mr-4 object-cover"
                   onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
                     const target = e.target as HTMLImageElement;
                     target.src = "/placeholder.svg?height=40&width=40";
@@ -193,7 +188,7 @@ export default function TrendingPage() {
                   <Play className="h-4 w-4 text-white" />
                 </div>
               </div>
-              <div>
+              <div className="ml-5">
                 <div className="font-medium">{track.title}</div>
                 <div className="text-sm text-gray-400 md:hidden">
                   {track.artist}
@@ -219,7 +214,7 @@ export default function TrendingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-black text-white flex flex-col mb-15">
       <NavigationBar />
 
       <div className="flex-1 container mx-auto px-4 py-8">
@@ -229,71 +224,6 @@ export default function TrendingPage() {
         </div>
 
         {renderTopTracks()}
-
-        {/* Trending Artists */}
-        <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Trending Artists</h2>
-            <Link
-              href="/artists"
-              className="text-sm text-[#ff6700] hover:text-[#cc5300]"
-            >
-              View All
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {[1, 2, 3, 4, 5].map((id) => (
-                <div
-                  key={id}
-                  className="bg-[#0f0f0f] rounded-xl p-4 text-center animate-pulse"
-                >
-                  <div className="w-24 h-24 bg-gray-700 rounded-full mx-auto mb-4"></div>
-                  <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-700 rounded w-2/3 mx-auto"></div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {trendingArtists.map((artist, index) => (
-                <Link
-                  href={`/artist/${encodeURIComponent(artist.name)}`}
-                  key={index}
-                  className="group"
-                >
-                  <div className="bg-[#0f0f0f] rounded-xl p-4 text-center transition-transform group-hover:translate-y-[-5px]">
-                    <div className="relative mx-auto w-24 h-24 mb-4">
-                      <Avatar className="w-24 h-24">
-                        <AvatarImage src={artist.cover || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {artist.name?.charAt(0) || "A"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <Play className="h-8 w-8 text-white" />
-                      </div>
-                    </div>
-                    <h3 className="font-medium">{artist.name}</h3>
-                    <p className="text-sm text-gray-400">
-                      {artist.followers} followers
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {!loading && trendingArtists.length === 0 && (
-            <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
-              <h3 className="text-xl font-bold mb-2">No Artists Found</h3>
-              <p className="text-gray-400">
-                Add some phonk tracks with artist names to see trending artists.
-              </p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

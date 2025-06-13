@@ -230,11 +230,15 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleAudioError = () => {
-    setError("Failed to load audio");
+  const handleAudioError = (event: Event) => {
+    const audio = event.target as HTMLAudioElement;
+    console.error("Audio error:", {
+      code: audio.error?.code,
+      message: audio.error?.message,
+      src: audio.src,
+    });
     setIsLoading(false);
     setIsPlaying(false);
-    // Do not clear queue or currentTrack on error to allow retry
   };
 
   const handleCanPlay = () => {
@@ -254,12 +258,63 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   ) => {
     console.log("playTrack called:", {
       track: track.title,
+      track_id: track.id,
       queueLength: newQueue.length || queue.length || 1,
       index,
       playlistName,
       newQueue: newQueue.map((t) => t.title),
       existingQueue: queue.map((t) => t.title),
     });
+
+    // Get authenticated user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.warn("No authenticated user found:", authError?.message);
+      setError("Please log in to play tracks");
+      // Proceed with playback even if not authenticated
+    } else {
+      // Validate track_id
+      const trackId = Number(track.id);
+      if (isNaN(trackId)) {
+        console.error("Invalid track_id:", track.id);
+        setError("Invalid track ID");
+        return;
+      }
+
+      // Log play to recently_played
+      console.log("Inserting into recently_played:", {
+        user_id: user.id,
+        track_id: trackId,
+        played_at: new Date().toISOString(),
+      });
+      const { error: insertError } = await supabase
+        .from("recently_played")
+        .insert({
+          user_id: user.id,
+          track_id: trackId,
+          played_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error("Failed to log play to recently_played:", {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+        });
+        setError("Failed to log play");
+        // Proceed with playback even if insert fails
+      } else {
+        console.log(
+          `Successfully logged play for track ${track.title} (ID: ${trackId}) by user ${user.id}`
+        );
+      }
+    }
+
+    // Update queue and track
     setPlaylistName(playlistName || null);
     const updatedQueue =
       newQueue.length > 0 ? newQueue : queue.length > 0 ? queue : [track];
@@ -268,37 +323,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrackIndex(
       newQueue.length > 0 ? index : updatedQueue.indexOf(track)
     );
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const durationInSeconds = parseDuration(track.duration);
-        if (!isNaN(durationInSeconds)) {
-          const { error } = await supabase.from("recently_played").insert({
-            user_id: user.id,
-            track_id: String(track.id),
-            duration: durationInSeconds,
-          });
-          if (error) {
-            console.error(
-              "Error logging recently played track:",
-              error.message
-            );
-          }
-        } else {
-          console.warn("Invalid track duration:", track.duration);
-        }
-      }
-    } catch (error: any) {
-      console.error("Error logging recently played track:", error.message);
-    }
-  };
-
-  const parseDuration = (duration: string): number => {
-    const [minutes, seconds] = duration.split(":").map(Number);
-    return (minutes || 0) * 60 + (seconds || 0);
   };
 
   const togglePlay = () => {
