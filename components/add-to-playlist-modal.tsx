@@ -45,7 +45,8 @@ export function AddToPlaylistModal({
           const { data, error } = await supabase
             .from("playlists")
             .select("id, title")
-            .eq("user_id", userId);
+            .eq("user_id", userId)
+            .neq("title", "Liked Songs"); // Exclude "Liked Songs" playlist
           if (error) {
             setError("Failed to load playlists");
           } else {
@@ -106,11 +107,12 @@ export function AddToPlaylistModal({
       if (countError)
         throw new Error(`Failed to fetch track count: ${countError.message}`);
 
-      // Re-fetch playlists
+      // Re-fetch playlists excluding "Liked Songs"
       const { data: updatedPlaylists, error: playlistError } = await supabase
         .from("playlists")
         .select("id, title")
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .neq("title", "Liked Songs");
       if (playlistError) {
         throw new Error(
           `Failed to refresh playlists: ${playlistError.message}`
@@ -143,19 +145,25 @@ export function AddToPlaylistModal({
           </div>
         )}
         <div className="space-y-4">
-          {playlists.map((playlist) => (
-            <Button
-              key={playlist.id}
-              onClick={() => handleSelectPlaylist(playlist.id)}
-              className={`w-full text-white ${
-                selectedPlaylistId === playlist.id
-                  ? "bg-[#ff6700] hover:bg-[#cc5300]"
-                  : "bg-black hover:bg-gray-800"
-              }`}
-            >
-              {playlist.title}
-            </Button>
-          ))}
+          {playlists.length === 0 ? (
+            <p className="text-gray-400 text-center">
+              No playlists available. Create a playlist to add this track.
+            </p>
+          ) : (
+            playlists.map((playlist) => (
+              <Button
+                key={playlist.id}
+                onClick={() => handleSelectPlaylist(playlist.id)}
+                className={`w-full text-white ${
+                  selectedPlaylistId === playlist.id
+                    ? "bg-[#ff6700] hover:bg-[#cc5300]"
+                    : "bg-black hover:bg-gray-800"
+                }`}
+              >
+                {playlist.title}
+              </Button>
+            ))
+          )}
         </div>
         <div className="mt-4 flex justify-center">
           <Button

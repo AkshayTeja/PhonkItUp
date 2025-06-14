@@ -105,15 +105,15 @@ export function PlaylistModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
         <DialogHeader>
-          <DialogTitle>Create New Playlist</DialogTitle>
+          <DialogTitle>Create New Phonkit</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="title">Playlist Title</Label>
+            <Label htmlFor="title">Phonkit Title</Label>
             <Input
               id="title"
               type="text"
-              placeholder="Playlist Title"
+              placeholder="Phonkit Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="bg-gray-900 border-gray-800 text-white"
