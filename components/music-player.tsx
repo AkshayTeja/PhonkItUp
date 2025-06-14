@@ -8,6 +8,7 @@ import {
   SkipBack,
   Volume2,
   Heart,
+  FastForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -185,7 +186,7 @@ export default function MusicPlayer() {
                   className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <SkipBack className="h-4 w-4 text-white" />
+                  <FastForward className="h-4 w-4 text-white transform rotate-180" />
                 </Button>
                 <Button
                   onClick={togglePlay}
@@ -209,7 +210,7 @@ export default function MusicPlayer() {
                   className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <SkipForward className="h-4 w-4 text-white" />
+                  <FastForward className="h-4 w-4 text-white" />
                 </Button>
                 <Button
                   variant="ghost"

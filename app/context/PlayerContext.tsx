@@ -107,6 +107,56 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  // Ensure "Liked Songs" playlist exists on user login
+  useEffect(() => {
+    const ensureLikedSongsPlaylist = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn(
+            "No user authenticated, skipping Liked Songs playlist creation"
+          );
+          return;
+        }
+
+        const { data: playlist, error: selectError } = await supabase
+          .from("playlists")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("title", "Liked Songs")
+          .maybeSingle();
+
+        if (selectError) {
+          console.error("Error checking Liked Songs playlist:", selectError);
+          return;
+        }
+
+        if (!playlist) {
+          const { error: insertError } = await supabase
+            .from("playlists")
+            .insert({
+              user_id: user.id,
+              title: "Liked Songs",
+              cover_url: "/liked.jpg",
+              created_at: new Date().toISOString(),
+            });
+
+          if (insertError) {
+            console.error("Error creating Liked Songs playlist:", insertError);
+          } else {
+            console.log(`Created Liked Songs playlist for user ${user.id}`);
+          }
+        }
+      } catch (err: any) {
+        console.error("Error ensuring Liked Songs playlist:", err.message);
+      }
+    };
+
+    ensureLikedSongsPlaylist();
+  }, []);
+
   // Load and play current track
   useEffect(() => {
     if (currentTrack && currentTrack.track_url && audioRef.current) {
@@ -131,10 +181,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setError("Failed to play track");
           setIsLoading(false);
           setIsPlaying(false);
-          // Do not clear queue or currentTrack on error to allow retry
         });
     } else if (!currentTrack) {
-      // Clear audio if no track is selected
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";
@@ -172,25 +220,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           .from("liked_songs")
           .select("id")
           .eq("user_id", user.id)
-          .eq("track_id", String(currentTrack.id))
+          .eq("track_id", Number(currentTrack.id)) // Cast to number for BIGINT
           .maybeSingle();
         if (error) {
-          console.error("Error checking liked status:", {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-          });
+          console.error("Error checking liked status:", error);
           setError("Failed to check like status");
           setLiked(false);
           return;
         }
         setLiked(!!data);
       } catch (err: any) {
-        console.error(
-          "Unexpected error checking liked status:",
-          err.message || err
-        );
+        console.error("Unexpected error checking liked status:", err.message);
         setError("Unexpected error checking like status");
         setLiked(false);
       }
@@ -217,11 +257,10 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       queueLength: queue.length,
     });
 
-    // Pause the player and keep the current track
     setIsPlaying(false);
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.currentTime = 0; // Reset to start for replay option
+      audioRef.current.currentTime = 0;
       setCurrentTime(0);
     }
     setError("Please select the next song to play");
@@ -266,7 +305,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       existingQueue: queue.map((t) => t.title),
     });
 
-    // Get authenticated user
     const {
       data: { user },
       error: authError,
@@ -274,9 +312,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     if (authError || !user) {
       console.warn("No authenticated user found:", authError?.message);
       setError("Please log in to play tracks");
-      // Proceed with playback even if not authenticated
     } else {
-      // Validate track_id
       const trackId = Number(track.id);
       if (isNaN(trackId)) {
         console.error("Invalid track_id:", track.id);
@@ -284,7 +320,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Log play to recently_played
       console.log("Inserting into recently_played:", {
         user_id: user.id,
         track_id: trackId,
@@ -299,14 +334,8 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         });
 
       if (insertError) {
-        console.error("Failed to log play to recently_played:", {
-          message: insertError.message,
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint,
-        });
+        console.error("Failed to log play to recently_played:", insertError);
         setError("Failed to log play");
-        // Proceed with playback even if insert fails
       } else {
         console.log(
           `Successfully logged play for track ${track.title} (ID: ${trackId}) by user ${user.id}`
@@ -314,7 +343,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // Update queue and track
     setPlaylistName(playlistName || null);
     const updatedQueue =
       newQueue.length > 0 ? newQueue : queue.length > 0 ? queue : [track];
@@ -449,25 +477,69 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      // Ensure "Liked Songs" playlist exists
+      const { data: playlist, error: selectPlaylistError } = await supabase
+        .from("playlists")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("title", "Liked Songs")
+        .maybeSingle();
+
+      if (selectPlaylistError) {
+        console.error(
+          "Error checking Liked Songs playlist:",
+          selectPlaylistError
+        );
+        setError("Failed to access playlist");
+        return;
+      }
+
+      let playlistId: string;
+      if (!playlist) {
+        const { data, error: insertError } = await supabase
+          .from("playlists")
+          .insert({
+            user_id: user.id,
+            title: "Liked Songs",
+            cover_url: "/liked.jpg",
+            created_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("Error creating Liked Songs playlist:", insertError);
+          setError("Failed to create playlist");
+          return;
+        }
+        playlistId = data.id;
+      } else {
+        playlistId = playlist.id;
+      }
+
+      // Check if song is already liked
+      const trackId = Number(currentTrack.id);
+      if (isNaN(trackId)) {
+        console.error("Invalid track_id:", currentTrack.id);
+        setError("Invalid track ID");
+        return;
+      }
+
       const { data: existingLike, error: selectError } = await supabase
         .from("liked_songs")
         .select("id")
         .eq("user_id", user.id)
-        .eq("track_id", String(currentTrack.id))
+        .eq("track_id", trackId)
         .maybeSingle();
 
       if (selectError) {
-        console.error("Select error:", {
-          message: selectError.message,
-          code: selectError.code,
-          details: selectError.details,
-          hint: selectError.hint,
-        });
+        console.error("Select error:", selectError);
         setError("Failed to check like status");
         return;
       }
 
       if (existingLike) {
+        // Unlike the song
         const { error } = await supabase
           .from("liked_songs")
           .delete()
@@ -475,19 +547,66 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         if (error) {
           console.error("Unlike error:", error.message);
           setError("Failed to unlike track");
-        } else {
-          setLiked(false);
+          return;
         }
+
+        // Remove from "Liked Songs" playlist
+        const { error: deletePlaylistError } = await supabase
+          .from("playlist_tracks")
+          .delete()
+          .eq("playlist_id", playlistId)
+          .eq("track_id", trackId);
+
+        if (deletePlaylistError) {
+          console.error(
+            "Error removing song from playlist:",
+            deletePlaylistError
+          );
+          setError("Failed to update playlist");
+          return;
+        }
+
+        setLiked(false);
       } else {
+        // Like the song
         const { error } = await supabase
           .from("liked_songs")
-          .insert({ user_id: user.id, track_id: String(currentTrack.id) });
+          .insert({ user_id: user.id, track_id: trackId });
         if (error) {
           console.error("Like error:", error.message);
           setError("Failed to like track");
-        } else {
-          setLiked(true);
+          return;
         }
+
+        // Check if track is already in playlist to avoid duplicates
+        const { data: existingPlaylistTrack } = await supabase
+          .from("playlist_tracks")
+          .select("id")
+          .eq("playlist_id", playlistId)
+          .eq("track_id", trackId)
+          .maybeSingle();
+
+        if (!existingPlaylistTrack) {
+          // Add to "Liked Songs" playlist
+          const { error: insertPlaylistError } = await supabase
+            .from("playlist_tracks")
+            .insert({
+              playlist_id: playlistId,
+              track_id: trackId,
+              added_at: new Date().toISOString(),
+            });
+
+          if (insertPlaylistError) {
+            console.error(
+              "Error adding song to playlist:",
+              insertPlaylistError
+            );
+            setError("Failed to update playlist");
+            return;
+          }
+        }
+
+        setLiked(true);
       }
     } catch (err: any) {
       console.error("Error toggling like:", err.message);

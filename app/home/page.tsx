@@ -542,7 +542,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {playlists.length === 0 ? (
               <div className="col-span-full text-center text-gray-400">
-                No playlists yet. Create one to get started!
+                No phonkits yet. Create one to get started!
               </div>
             ) : (
               playlists.map((playlist) => (
@@ -619,11 +619,8 @@ export default function HomePage() {
               <p className="text-gray-400 mb-6">
                 Start liking tracks to see them here
               </p>
-              <Link
-                href="/trending"
-                onClick={() => handleNavigation("/trending")}
-              >
-                <Button className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3">
+              <Link href="/vault" onClick={() => handleNavigation("/vault")}>
+                <Button className="relative overflow-hidden inline-flex bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 items-center justify-center space-x-3">
                   Discover Music
                   <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                 </Button>
@@ -697,11 +694,8 @@ export default function HomePage() {
               <p className="text-gray-400 mb-6">
                 Play some tracks to see them here
               </p>
-              <Link
-                href="/trending"
-                onClick={() => handleNavigation("/trending")}
-              >
-                <Button className="relative overflow-hidden w-full bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-3">
+              <Link href="/vault" onClick={() => handleNavigation("/vault")}>
+                <Button className="relative overflow-hidden inline-flex bg-[#ff6700] hover:bg-[#cc5300] text-white hover:text-white border-none px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 items-center justify-center space-x-3">
                   Discover Music
                   <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                 </Button>
