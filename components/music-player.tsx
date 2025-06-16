@@ -118,7 +118,7 @@ export default function MusicPlayer() {
       {/* Player */}
       <div className="bg-[#0f0f0f] border-t border-gray-800 fixed bottom-0 left-0 right-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-16">
+          <div className="flex items-center h-18">
             {/* Track Info */}
             <div className="flex items-center flex-1 min-w-0">
               <Image
@@ -172,52 +172,53 @@ export default function MusicPlayer() {
 
             {/* Controls */}
             <div className="flex flex-col items-center flex-1">
-              <div className="flex items-center mb-1">
+              <div className="flex items-center m-2 mb-1 gap-2">
                 {/* Loop Button */}
-                <div className="hidden md:flex items-center px-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleLoop}
-                    className={`h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isLooping
-                        ? "bg-[#ff6700] hover:bg-[#cc5200]"
-                        : "bg-gray-600 hover:bg-[#ff6700]"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleLoop}
+                  className={`h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isLooping
+                      ? "bg-[#ff6700] hover:bg-[#cc5200]"
+                      : "hover:bg-[#ff6700]"
+                  }`}
+                  disabled={!currentTrack || isLoading}
+                  title={isLooping ? "Loop: On" : "Loop: Off"}
+                >
+                  <Repeat
+                    className={`h-4 w-4 ${
+                      isLooping ? "text-white" : "text-gray-300"
                     }`}
-                    disabled={!currentTrack || isLoading}
-                    title={isLooping ? "Loop: On" : "Loop: Off"}
-                  >
-                    <Repeat
-                      className={`h-4 w-4 ${
-                        isLooping ? "text-white" : "text-gray-300"
-                      }`}
-                    />
-                  </Button>
-                </div>
+                  />
+                </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipBackward}
-                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!hasPreviousTrack || isLoading}
                 >
                   <SkipBack className="h-4 w-4 text-white" />
                 </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipBackwardSeconds}
-                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
                   <FastForward className="h-4 w-4 text-white transform rotate-180" />
                 </Button>
+
                 <Button
                   onClick={togglePlay}
                   disabled={
                     !currentTrack || !currentTrack.track_url || isLoading
                   }
-                  className="mx-2 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -227,27 +228,29 @@ export default function MusicPlayer() {
                     <Play className="h-5 w-5 text-white" />
                   )}
                 </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipForwardSeconds}
-                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
                   <FastForward className="h-4 w-4 text-white" />
                 </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipForward}
-                  className="mx-1 bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!hasNextTrack || isLoading}
                 >
                   <SkipForward className="h-4 w-4 text-white" />
                 </Button>
               </div>
 
-              <div className="w-full hidden sm:flex items-center gap-2">
+              <div className="w-full hidden sm:flex items-center gap-2 mt-1 m-2 ">
                 <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(currentTime)}
                 </span>

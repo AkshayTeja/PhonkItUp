@@ -12,6 +12,7 @@ import {
   Search,
   User,
   TrendingUp,
+  Edit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavigationBar } from "@/components/navigation-bar";
@@ -24,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Dialog } from "@radix-ui/react-dialog";
+import { Input } from "@/components/ui/input";
 
 interface Track {
   id: string;
@@ -56,6 +58,8 @@ export default function PlaylistPage({
   const router = useRouter();
   const resolvedParams = React.use(params);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
 
   useEffect(() => {
     const fetchPlaylist = async () => {
@@ -126,6 +130,7 @@ export default function PlaylistPage({
             playlistData.cover_url || "/placeholder.svg?height=300&width=300",
           tracks,
         });
+        setNewPlaylistName(playlistData.title); // Initialize rename input with current title
       } catch (error: any) {
         console.error("Error fetching playlist:", error.message || error);
         setErrorMessage("Failed to load playlist. Please try again.");
@@ -189,6 +194,27 @@ export default function PlaylistPage({
     } catch (error: any) {
       console.error("Error deleting playlist:", error.message);
       setErrorMessage(error.message || "Failed to delete playlist");
+    }
+  };
+
+  const handleRenamePlaylist = async () => {
+    if (!playlist || !newPlaylistName.trim()) {
+      setErrorMessage("Playlist name cannot be empty");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("playlists")
+        .update({ title: newPlaylistName.trim() })
+        .eq("id", playlist.id);
+      if (error) throw new Error(`Rename playlist error: ${error.message}`);
+      setPlaylist((prev) =>
+        prev ? { ...prev, title: newPlaylistName.trim() } : null
+      );
+      setIsRenameDialogOpen(false);
+    } catch (error: any) {
+      console.error("Error renaming playlist:", error.message);
+      setErrorMessage(error.message || "Failed to rename playlist");
     }
   };
 
@@ -269,6 +295,13 @@ export default function PlaylistPage({
                   </p>
                   <div>
                     <div className="flex gap-4">
+                      <Button
+                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                        onClick={() => setIsRenameDialogOpen(true)}
+                      >
+                        <Edit2 className="mr-1 h-4 w-4" /> Rename
+                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                      </Button>
                       <Button
                         className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
                         onClick={() => handleNavigation("/vault")}
@@ -422,6 +455,40 @@ export default function PlaylistPage({
               className="relative overflow-hidden w-auto px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
             >
               Delete
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle>Rename Playlist</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newPlaylistName}
+              onChange={(e) => setNewPlaylistName(e.target.value)}
+              placeholder="Enter new playlist name"
+              className="bg-[#1a1a1a] text-white border-gray-600"
+            />
+          </div>
+          <div className="flex justify-center gap-4 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRenameDialogOpen(false);
+                setNewPlaylistName(playlist?.title || "");
+              }}
+              className="w-auto px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenamePlaylist}
+              className="relative overflow-hidden w-auto px-4 bg-[#ff6700] hover:bg-[#cc5300] text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
+            >
+              Save
               <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
             </Button>
           </div>
