@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogHeader,
 } from "@/components/ui/dialog";
+import { v4 as uuidv4 } from "uuid";
 
 interface Playlist {
   id: string;
@@ -48,6 +49,7 @@ interface Track {
   plays: string;
   change?: string;
   playedAt?: string;
+  renderKey: string;
 }
 
 interface PhonkSong {
@@ -216,6 +218,7 @@ export default function HomePage() {
           change: "0",
           popularity: item.phonk_songs.song_popularity || 0,
           track_url: item.phonk_songs.track_url || "",
+          renderKey: uuidv4(), // Add renderKey
         })) || []
       );
 
@@ -254,7 +257,7 @@ export default function HomePage() {
           id: item.phonk_songs.id.toString(),
           title: item.phonk_songs.song_name || "Unknown Title",
           artist: item.phonk_songs.song_artist || "Unknown Artist",
-          duration: item.phonk_songs.song_duration?.toString() || "0", // Use song_duration
+          duration: item.phonk_songs.song_duration?.toString() || "0",
           plays: "0",
           cover:
             item.phonk_songs.album_cover_url ||
@@ -265,6 +268,7 @@ export default function HomePage() {
           playedAt: formatDistanceToNow(new Date(item.played_at), {
             addSuffix: true,
           }),
+          renderKey: uuidv4(), // Add renderKey
         })) || []
       );
     } catch (error: any) {
@@ -629,7 +633,7 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {likedSongs.map((track) => (
-                <div key={track.id} className="group relative">
+                <div key={track.renderKey} className="group relative">
                   <div
                     className="cursor-pointer"
                     onClick={() => playTrack(track)}
@@ -704,7 +708,7 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {recentlyPlayed.map((track) => (
-                <div key={track.id} className="group relative">
+                <div key={track.renderKey} className="group relative">
                   <div
                     className="cursor-pointer"
                     onClick={() => playTrack(track)}

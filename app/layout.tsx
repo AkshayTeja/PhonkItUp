@@ -3,6 +3,7 @@ import "./globals.css";
 import { Play } from "next/font/google";
 import { PlayerProvider } from "../app/context/PlayerContext";
 import { ClientLayoutWrapper } from "../components/client-layout-wrapper";
+import { ClientPlayerProvider } from "@/components/client-player-provider";
 
 const play = Play({
   subsets: ["latin"],
@@ -24,10 +25,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={play.variable}>
       <body className="font-anta">
-        <PlayerProvider>
+        <ClientPlayerProvider>
           <main>{children}</main>
           <ClientLayoutWrapper />
-        </PlayerProvider>
+        </ClientPlayerProvider>
       </body>
     </html>
   );

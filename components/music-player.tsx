@@ -9,6 +9,7 @@ import {
   Volume2,
   Heart,
   FastForward,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -53,6 +54,7 @@ export default function MusicPlayer() {
     queue,
     currentTrackIndex,
     playlistName,
+    isLooping,
     togglePlay,
     skipForward,
     skipBackward,
@@ -61,6 +63,7 @@ export default function MusicPlayer() {
     setCurrentTime,
     setVolume,
     toggleLike,
+    toggleLoop,
   } = usePlayer();
 
   const track = currentTrack || defaultTrack;
@@ -170,6 +173,27 @@ export default function MusicPlayer() {
             {/* Controls */}
             <div className="flex flex-col items-center flex-1">
               <div className="flex items-center mb-1">
+                {/* Loop Button */}
+                <div className="hidden md:flex items-center px-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleLoop}
+                    className={`h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isLooping
+                        ? "bg-[#ff6700] hover:bg-[#cc5200]"
+                        : "bg-gray-600 hover:bg-[#ff6700]"
+                    }`}
+                    disabled={!currentTrack || isLoading}
+                    title={isLooping ? "Loop: On" : "Loop: Off"}
+                  >
+                    <Repeat
+                      className={`h-4 w-4 ${
+                        isLooping ? "text-white" : "text-gray-300"
+                      }`}
+                    />
+                  </Button>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -222,6 +246,7 @@ export default function MusicPlayer() {
                   <SkipForward className="h-4 w-4 text-white" />
                 </Button>
               </div>
+
               <div className="w-full hidden sm:flex items-center gap-2">
                 <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(currentTime)}

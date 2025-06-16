@@ -35,6 +35,7 @@ interface PlayerContextType {
   queue: Track[];
   currentTrackIndex: number;
   playlistName: string | null;
+  isLooping: boolean;
   playTrack: (
     track: Track,
     queue?: Track[],
@@ -49,6 +50,7 @@ interface PlayerContextType {
   setCurrentTime: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleLike: () => Promise<void>;
+  toggleLoop: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -65,6 +67,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const [queue, setQueue] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
   const [playlistName, setPlaylistName] = useState<string | null>(null);
+  const [isLooping, setIsLooping] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const isDragging = useRef(false);
@@ -106,6 +109,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     };
   }, []);
+
+  // Update audio loop property when isLooping changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
 
   // Ensure "Liked Songs" playlist exists on user login
   useEffect(() => {
@@ -165,6 +175,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audioRef.current.pause();
       setIsPlaying(false);
       audioRef.current.src = currentTrack.track_url;
+      audioRef.current.loop = isLooping;
       audioRef.current.load();
       audioRef.current.onloadedmetadata = () => {
         setDuration(audioRef.current!.duration);
@@ -191,7 +202,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       setCurrentTime(0);
       setDuration(0);
     }
-  }, [currentTrack]);
+  }, [currentTrack, isLooping]);
 
   // Update volume
   useEffect(() => {
@@ -255,17 +266,22 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       currentTrack: currentTrack?.title,
       currentTrackIndex,
       queueLength: queue.length,
+      isLooping,
     });
 
-    setIsPlaying(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setCurrentTime(0);
-    }
-    setError("Please select the next song to play");
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
+    // If looping is enabled, the audio element will handle it automatically
+    // So we only need to handle the case when looping is disabled
+    if (!isLooping) {
+      setIsPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        // Keep the current time at the end of the song instead of resetting to 0
+        setCurrentTime(audioRef.current.duration || duration);
+      }
+      setError("Please select the next song to play");
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     }
   };
 
@@ -375,6 +391,14 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           console.error("Error playing track:", error);
           setError("Failed to play track");
         });
+    }
+  };
+
+  const toggleLoop = () => {
+    console.log("Toggling loop:", !isLooping);
+    setIsLooping(!isLooping);
+    if (audioRef.current) {
+      audioRef.current.loop = !isLooping;
     }
   };
 
@@ -636,6 +660,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         queue,
         currentTrackIndex,
         playlistName,
+        isLooping,
         playTrack,
         togglePlay,
         skipForward,
@@ -645,6 +670,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         setCurrentTime: handleSetCurrentTime,
         setVolume,
         toggleLike,
+        toggleLoop,
       }}
     >
       {children}
