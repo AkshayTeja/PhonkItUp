@@ -114,61 +114,81 @@ export default function TrendingPage() {
     }
 
     return (
-      <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 overflow-hidden">
-        <div className="grid grid-cols-12 text-sm text-gray-400 p-4 border-b border-gray-800">
-          <div className="col-span-1">#</div>
-          <div className="col-span-5">Title</div>
-          <div className="col-span-2 hidden md:block">Artist</div>
-          <div className="col-span-2 hidden md:block">Plays</div>
-          <div className="col-span-1 text-center">Trend</div>
-          <div className="col-span-1 text-right">Duration</div>
+      <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-4 overflow-x-auto">
+        <style jsx>{`
+          .shine {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+          }
+          .shine:hover {
+            transform: scale(1.05);
+          }
+          .shine::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -75%;
+            width: 50%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: skewX(-20deg);
+            transition: left 0.7s ease-in-out;
+          }
+          .shine:hover::after {
+            left: 125%;
+          }
+        `}</style>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {topTracks.map((track, index) => (
+            <div
+              key={track.id}
+              className="bg-gray-800 rounded-lg p-4 hover:bg-[#cc5300] cursor-pointer flex items-center relative shine"
+              onClick={() => handleTrackPlay(track)}
+            >
+              <div className="flex items-center w-full">
+                <div className="relative group w-[60px] h-[60px] flex-shrink-0">
+                  <Image
+                    src={track.cover}
+                    alt={track.title}
+                    width={60}
+                    height={60}
+                    className="rounded object-cover"
+                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/placeholder.svg?height=60&width=60";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/60 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Play className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                <div className="ml-4 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium truncate text-white">
+                      {track.title}
+                    </div>
+                    <div className="text-gray-200 text-sm">
+                      Rank {index + 1}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-200 truncate">
+                    {track.artist}
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-200 mt-2">
+                    <div className="flex items-center">
+                      <span>{track.plays} plays</span>
+                    </div>
+                    <div className="flex items-center text-white">
+                      {track.change} <TrendingUp className="h-3 w-3 ml-1" />
+                    </div>
+                    <div>{track.duration}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-
-        {topTracks.map((track, index) => (
-          <div
-            key={track.id}
-            className="grid grid-cols-12 items-center p-4 hover:bg-gray-800/30 cursor-pointer transition-colors"
-            onClick={() => handleTrackPlay(track)}
-          >
-            <div className="col-span-1 text-gray-400">{index + 1}</div>
-            <div className="col-span-5 flex items-center">
-              <div className="relative group w-[40px] h-[40px]">
-                <Image
-                  src={track.cover}
-                  alt={track.title}
-                  width={40}
-                  height={40}
-                  className="rounded mr-4 object-cover"
-                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder.svg?height=40&width=40";
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/60 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Play className="h-4 w-4 text-white" />
-                </div>
-              </div>
-              <div className="ml-5">
-                <div className="font-medium">{track.title}</div>
-                <div className="text-sm text-gray-400 md:hidden">
-                  {track.artist}
-                </div>
-              </div>
-            </div>
-            <div className="col-span-2 hidden md:block text-gray-400">
-              {track.artist}
-            </div>
-            <div className="col-span-2 hidden md:block text-gray-400">
-              {track.plays}
-            </div>
-            <div className="col-span-1 text-center text-green-500">
-              {track.change} <TrendingUp className="inline h-3 w-3 ml-1" />
-            </div>
-            <div className="col-span-1 text-right text-gray-400">
-              {track.duration}
-            </div>
-          </div>
-        ))}
       </div>
     );
   };
@@ -176,13 +196,11 @@ export default function TrendingPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col mb-15">
       <NavigationBar />
-
       <div className="flex-1 container mx-auto px-4 py-8 pb-24">
         <div className="flex items-center mb-8">
           <TrendingUp className="h-8 w-8 text-[#ff6700] mr-3" />
           <h1 className="text-3xl font-bold">Top Tracks</h1>
         </div>
-
         {renderTopTracks()}
       </div>
     </div>

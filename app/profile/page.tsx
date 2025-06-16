@@ -502,7 +502,8 @@ export default function ProfilePage() {
               {errorMessage}
             </div>
           )}
-          <div className="relative mb-10">
+          <div className="relative pb-10 md:pb-0">
+            {/* Wallpaper Section */}
             <div className="h-48 rounded-xl overflow-hidden">
               <Image
                 src={wallpaper}
@@ -512,21 +513,47 @@ export default function ProfilePage() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="absolute -bottom-16 left-8 flex items-end">
-              <Avatar className="h-32 w-32 border-4 border-black">
+
+            {/* Profile Picture and Info - Positioned over wallpaper */}
+            <div className="absolute top-24 left-8 flex items-end">
+              <Avatar className="h-32 w-32 border-4 border-black shadow-lg">
                 <AvatarImage src={profilePic} alt="User" />
                 <AvatarFallback>
                   {username?.[0]?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="ml-4 mb-4">
-                <h1 className="text-3xl font-bold">{name || username}</h1>
-                <p className="text-gray-400">
+                <h1 className="text-3xl font-bold text-white drop-shadow-lg">
+                  {name || username}
+                </h1>
+                <p className="text-gray-200 drop-shadow-md">
                   @{username} • {playlistCount} Phonkits
                 </p>
               </div>
             </div>
-            <div className="absolute bottom-4 right-4 flex gap-2">
+
+            {/* Buttons for mobile screens (below md) */}
+            <div className="md:hidden flex gap-2 mt-20 px-4 justify-center">
+              <Button
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105"
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Profile
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
+              </Button>
+              <Link
+                href="/login"
+                onClick={handleLogout}
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center justify-center rounded-md"
+              >
+                <span className="relative z-10 flex items-center">Logout</span>
+                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
+              </Link>
+            </div>
+
+            {/* Buttons for medium screens and above */}
+            <div className="hidden md:flex absolute bottom-4 right-4 gap-2">
               <Button
                 className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105"
                 onClick={() => setIsEditModalOpen(true)}
@@ -546,126 +573,26 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
-              <DialogHeader>
-                <DialogTitle>Edit Profile</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setName(e.target.value)
-                    }
-                    className="bg-gray-900 border-gray-800 text-white"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={username}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setUsername(e.target.value)
-                    }
-                    className="bg-gray-900 border-gray-800 text-white"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="profilePic">Profile Picture</Label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      id="profilePic"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setProfilePicFile(e.target.files?.[0] || null)
-                      }
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="profilePic"
-                      className="flex items-center gap-2 cursor-pointer text-[#ff6700]"
-                    >
-                      <Upload className="w-5 h-5" />
-                      <span>Upload</span>
-                    </label>
-                    <span className="text-sm text-gray-400">
-                      {profilePicFile ? profilePicFile.name : "No file chosen"}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="wallpaper">Wallpaper</Label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      id="wallpaper"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setWallpaperFile(e.target.files?.[0] || null)
-                      }
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="wallpaper"
-                      className="flex items-center gap-2 cursor-pointer text-[#ff6700]"
-                    >
-                      <Upload className="w-5 h-5" />
-                      <span>Upload</span>
-                    </label>
-                    <span className="text-sm text-gray-400">
-                      {wallpaperFile ? wallpaperFile.name : "No file chosen"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center gap-4 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setProfilePicFile(null);
-                    setWallpaperFile(null);
-                  }}
-                  className="w-auto px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleProfileUpdate}
-                  className="relative overflow-hidden w-auto px-4 bg-[#ff6700] hover:bg-[#cc5300] text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
-                >
-                  Save Changes
-                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <div className="mt-20 mb-20">
-            <Tabs defaultValue="playlists" className="mb-10">
+          <div className="md:mt-20 mb-20">
+            <Tabs defaultValue="playlists">
               <TabsList className="bg-gray-900 border border-gray-800">
                 <TabsTrigger
                   value="playlists"
-                  className="data-[state=active]:bg-[#ff6700] text-white"
+                  className="data-[state=active]:bg-[#ff6700] data-[state=active]:text-white text-gray-400"
                 >
                   <Music className="mr-2 h-4 w-4" />
                   Phonkits
                 </TabsTrigger>
                 <TabsTrigger
                   value="recent"
-                  className="data-[state=active]:bg-[#ff6700] text-white"
+                  className="data-[state=active]:bg-[#ff6700] data-[state=active]:text-white text-gray-400"
                 >
                   <Clock className="mr-2 h-4 w-4" />
                   Recently Played
                 </TabsTrigger>
                 <TabsTrigger
                   value="liked"
-                  className="data-[state=active]:bg-[#ff6700] text-white"
+                  className="data-[state=active]:bg-[#ff6700] data-[state=active]:text-white text-gray-400"
                 >
                   <Heart className="mr-2 h-4 w-4" />
                   Liked Tracks
@@ -673,73 +600,86 @@ export default function ProfilePage() {
               </TabsList>
 
               <TabsContent value="playlists" className="mt-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Your Phonkits</h2>
-                  <Button
-                    onClick={() => setIsPlaylistModalOpen(true)}
-                    className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                  >
-                    <PlaylistAdd className="mr-2 h-4 w-4" />
-                    Create a Phonkit
-                    <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                  {playlists.length === 0 ? (
-                    <div className="col-span-full text-center text-gray-400">
-                      No playlists yet. Create one to get started!
+                <div className="mb-12">
+                  <div className="mb-6 flex flex-col items-start md:flex-row md:items-center md:justify-between">
+                    <h2 className="text-2xl font-bold mb-4 md:mb-0">
+                      Your Phonkits
+                    </h2>
+                    <div className="flex gap-4">
+                      <Button
+                        onClick={() => setIsPlaylistModalOpen(true)}
+                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                      >
+                        <PlaylistAdd className="mr-2 h-4 w-4" />
+                        Create a Phonkit
+                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                      </Button>
+                      <Button
+                        onClick={() => handleNavigation("/profile")}
+                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                      >
+                        View All
+                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                      </Button>
                     </div>
-                  ) : (
-                    playlists.map((playlist) => (
-                      <div key={playlist.id} className="group relative">
-                        <Link
-                          href={`/playlist/${playlist.id}`}
-                          className="block"
-                          onClick={() =>
-                            handleNavigation(`/playlist/${playlist.id}`)
-                          }
-                        >
-                          <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
-                            <div className="relative aspect-square">
-                              <Image
-                                src={playlist.cover}
-                                alt={playlist.title}
-                                fill
-                                className="object-cover"
-                              />
-                              <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
-                                <Button className="play-button h-12 w-12 rounded-full p-0">
-                                  <Play className="h-6 w-6" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                    {playlists.length === 0 ? (
+                      <div className="col-span-full text-center text-gray-400">
+                        No playlists yet. Create one to get started!
+                      </div>
+                    ) : (
+                      playlists.map((playlist) => (
+                        <div key={playlist.id} className="group relative">
+                          <Link
+                            href={`/playlist/${playlist.id}`}
+                            className="block"
+                            onClick={() =>
+                              handleNavigation(`/playlist/${playlist.id}`)
+                            }
+                          >
+                            <div className="bg-[#0f0f0f] rounded-xl overflow-hidden transition-transform group-hover:translate-y-[-5px]">
+                              <div className="relative aspect-square">
+                                <Image
+                                  src={playlist.cover}
+                                  alt={playlist.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                                <div className="absolute inset-0 play-overlay opacity-0 group-hover:opacity-100 flex items-center justify-center">
+                                  <Button className="play-button h-12 w-12 rounded-full p-0">
+                                    <Play className="h-6 w-6" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="p-4 flex items-center justify-between">
+                                <div>
+                                  <h3 className="font-medium truncate">
+                                    {playlist.title}
+                                  </h3>
+                                  <p className="text-sm text-gray-400">
+                                    {playlist.tracks} tracks
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 hover:text-red-400"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeletePlaylist(playlist.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
-                            <div className="p-4 flex items-center justify-between">
-                              <div>
-                                <h3 className="font-medium truncate">
-                                  {playlist.title}
-                                </h3>
-                                <p className="text-sm text-gray-400">
-                                  {playlist.tracks} tracks
-                                </p>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-500 hover:text-red-400"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleDeletePlaylist(playlist.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                    ))
-                  )}
+                          </Link>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -813,7 +753,9 @@ export default function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="liked" className="mt-6 mb-20">
-                <h2 className="text-2xl font-bold mb-6">Liked Tracks</h2>
+                <h2 className="text-2xl font-bold mb-6 text-white">
+                  Liked Tracks
+                </h2>
                 {likedSongs.length === 0 ? (
                   <div className="bg-[#0f0f0f] rounded-xl border border-gray-800 p-8 text-center">
                     <Heart className="h-16 w-16 text-[#ff6700] mx-auto mb-4" />
@@ -892,30 +834,32 @@ export default function ProfilePage() {
         />
       </div>
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800">
+        <DialogContent className="max-w-[320px] sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800 mx-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 fixed">
           <DialogHeader>
-            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Are you sure?
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-400">
-              Are you sure you want to delete this playlist? This action cannot
+          <div className="py-3 sm:py-4">
+            <p className="text-gray-400 text-sm sm:text-base">
+              Are you sure you want to delete this phonkit? This action cannot
               be undone.
             </p>
           </div>
-          <div className="flex justify-center gap-4 mt-4">
+          <div className="flex justify-center gap-3 sm:gap-4 mt-3 sm:mt-4">
             <Button
               variant="outline"
               onClick={() => {
                 setIsDeleteConfirmOpen(false);
                 setPlaylistToDelete(null);
               }}
-              className="w-auto px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
+              className="w-auto px-3 sm:px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmDeletePlaylist}
-              className="relative overflow-hidden w-auto px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
+              className="relative overflow-hidden w-auto px-3 sm:px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
             >
               Delete
               <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />

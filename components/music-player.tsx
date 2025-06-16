@@ -84,49 +84,18 @@ export default function MusicPlayer() {
 
   return (
     <>
-      {/* Mobile Navigation */}
-      <div className="md:hidden bg-[#0f0f0f] border-t border-gray-800 fixed bottom-16 left-0 right-0 z-40">
-        <div className="flex items-center justify-around py-3">
-          <Link href="/home" className="flex flex-col items-center text-white">
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          <Link
-            href="/trending"
-            className="flex flex-col items-center text-gray-400"
-          >
-            <TrendingUp className="h-5 w-5" />
-            <span className="text-xs mt-1">Trending</span>
-          </Link>
-          <Link
-            href="/search"
-            className="flex flex-col items-center text-gray-400"
-          >
-            <Search className="h-5 w-5" />
-            <span className="text-xs mt-1">Search</span>
-          </Link>
-          <Link
-            href="/profile"
-            className="flex flex-col items-center text-gray-400"
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profile</span>
-          </Link>
-        </div>
-      </div>
-
       {/* Player */}
       <div className="bg-[#0f0f0f] border-t border-gray-800 fixed bottom-0 left-0 right-0 z-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center h-18">
+          <div className="flex items-center sm:h-18 h-20">
             {/* Track Info */}
             <div className="flex items-center flex-1 min-w-0">
               <Image
                 src={track.cover || defaultTrack.cover}
                 alt={track.title}
-                width={40}
-                height={40}
-                className="rounded-sm mr-3 hidden sm:block object-cover"
+                width={48}
+                height={48}
+                className="sm:w-[40px] sm:h-[40px] w-[48px] h-[48px] rounded-sm mr-3 hidden sm:block object-cover"
                 onError={(e) => {
                   e.currentTarget.src = defaultTrack.cover;
                 }}
@@ -134,10 +103,10 @@ export default function MusicPlayer() {
               <div className="flex-1 min-w-0 flex items-center gap-2">
                 <div className="truncate flex-1 flex items-center gap-1">
                   <div className="truncate">
-                    <span className="text-sm text-white font-medium truncate block">
+                    <span className="sm:text-sm text-base text-white font-medium truncate block">
                       {track.title}
                     </span>
-                    <span className="text-xs text-gray-400 truncate block">
+                    <span className="sm:text-xs text-sm text-gray-400 truncate block">
                       {track.artist}
                     </span>
                   </div>
@@ -149,7 +118,7 @@ export default function MusicPlayer() {
                     disabled={isLoading || !currentTrack}
                   >
                     <Heart
-                      className={`h-4 w-4 ${
+                      className={`sm:h-4 sm:w-4 h-5 w-5 ${
                         liked
                           ? "text-[#ff6700] fill-[#ff6700]"
                           : "text-gray-400 hover:text-white"
@@ -157,14 +126,16 @@ export default function MusicPlayer() {
                     />
                   </Button>
                   {(playlistName || isLoading) && (
-                    <span className="text-xs text-gray-400 truncate max-w-[80px]">
+                    <span className="sm:text-xs text-sm text-gray-400 truncate max-w-[80px]">
                       {isLoading ? "Loading..." : playlistName}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {error && (
-                    <span className="text-red-600 text-xs">{error}</span>
+                    <span className="sm:text-xs text-sm text-red-600">
+                      {error}
+                    </span>
                   )}
                 </div>
               </div>
@@ -178,7 +149,7 @@ export default function MusicPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={toggleLoop}
-                  className={`h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed ${
                     isLooping
                       ? "bg-[#ff6700] hover:bg-[#cc5200]"
                       : "hover:bg-[#ff6700]"
@@ -187,7 +158,7 @@ export default function MusicPlayer() {
                   title={isLooping ? "Loop: On" : "Loop: Off"}
                 >
                   <Repeat
-                    className={`h-4 w-4 ${
+                    className={`sm:h-4 sm:w-4 h-5 w-5 ${
                       isLooping ? "text-white" : "text-gray-300"
                     }`}
                   />
@@ -197,20 +168,20 @@ export default function MusicPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={skipBackward}
-                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!hasPreviousTrack || isLoading}
                 >
-                  <SkipBack className="h-4 w-4 text-white" />
+                  <SkipBack className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipBackwardSeconds}
-                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <FastForward className="h-4 w-4 text-white transform rotate-180" />
+                  <FastForward className="sm:h-4 sm:w-4 h-5 w-5 text-white transform rotate-180" />
                 </Button>
 
                 <Button
@@ -218,14 +189,14 @@ export default function MusicPlayer() {
                   disabled={
                     !currentTrack || !currentTrack.track_url || isLoading
                   }
-                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="sm:h-4 sm:w-4 h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : isPlaying ? (
-                    <Pause className="h-5 w-5 text-white" />
+                    <Pause className="sm:h-5 sm:w-5 h-6 w-6 text-white" />
                   ) : (
-                    <Play className="h-5 w-5 text-white" />
+                    <Play className="sm:h-5 sm:w-5 h-6 w-6 text-white" />
                   )}
                 </Button>
 
@@ -233,24 +204,24 @@ export default function MusicPlayer() {
                   variant="ghost"
                   size="icon"
                   onClick={skipForwardSeconds}
-                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!currentTrack || isLoading}
                 >
-                  <FastForward className="h-4 w-4 text-white" />
+                  <FastForward className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
                 </Button>
 
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={skipForward}
-                  className="bg-[#ff6700] hover:bg-[#cc5200] h-8 w-8 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!hasNextTrack || isLoading}
                 >
-                  <SkipForward className="h-4 w-4 text-white" />
+                  <SkipForward className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
                 </Button>
               </div>
 
-              <div className="w-full hidden sm:flex items-center gap-2 mt-1 m-2 ">
+              <div className="w-full hidden sm:flex items-center gap-2 mt-1 m-2">
                 <span className="text-xs text-gray-400 min-w-[35px]">
                   {formatTime(currentTime)}
                 </span>

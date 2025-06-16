@@ -44,7 +44,67 @@ export function NavigationBar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [userDisplayName, setUserDisplayName] = useState<string>("User");
+  const [authDisplayName, setAuthDisplayName] = useState<string>("User");
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const pathname = usePathname();
+
+  // Fetch user data for dynamic profile
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+        if (authError) {
+          console.error("Error fetching user:", authError.message);
+          setErrorMessage("Failed to authenticate user.");
+          return;
+        }
+        if (user) {
+          // Fetch display_name from user_metadata for the handle
+          const authName =
+            user.user_metadata?.display_name || `user_${user.id.slice(0, 8)}`;
+          setAuthDisplayName(authName);
+
+          // Fetch name and profile picture from profiles table
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("name, profile_picture")
+            .eq("id", user.id)
+            .single();
+
+          if (profileError) {
+            console.error("Error fetching profile data:", profileError.message);
+            setErrorMessage("Failed to fetch profile data.");
+            setUserDisplayName(`user_${user.id.slice(0, 8)}`);
+            setUserAvatarUrl(null);
+          } else if (!profileData) {
+            console.warn("No profile found for user:", user.id);
+            setErrorMessage("No profile found. Please create a profile.");
+            setUserDisplayName(`user_${user.id.slice(0, 8)}`);
+            setUserAvatarUrl(null);
+          } else {
+            setUserDisplayName(
+              profileData?.name || `user_${user.id.slice(0, 8)}`
+            );
+            setUserAvatarUrl(profileData?.profile_picture || null);
+          }
+        } else {
+          console.warn("No authenticated user found.");
+          setErrorMessage("No user authenticated.");
+        }
+      } catch (error: any) {
+        console.error("Error fetching user data:", error.message || error);
+        setErrorMessage(
+          "An unexpected error occurred while fetching profile data."
+        );
+      }
+    };
+    fetchUserData();
+  }, []);
 
   // Fetch search results from Supabase
   useEffect(() => {
@@ -134,6 +194,17 @@ export function NavigationBar() {
     }`;
   };
 
+  // Generate AvatarFallback from display name
+  const getAvatarFallback = (name: string) => {
+    const initials = name
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+    return initials || "JD";
+  };
+
   return (
     <>
       {/* Desktop Navigation */}
@@ -211,7 +282,7 @@ export function NavigationBar() {
                             ? result.song_name
                             : result.title}
                           <span className="ml-2 text-xs text-gray-500">
-                            {result.type === "playlist" ? "[Phonkit]" : ""}
+                            {result.type === "playlist" ? "[Playlist]" : ""}
                           </span>
                         </div>
                         <div className="text-sm text-gray-400">
@@ -245,21 +316,30 @@ export function NavigationBar() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="bg-[#0f0f0f] border-gray-800 p-0"
+                  className="bg-[#0f0f0f] border-gray-800 p-0 text-[#ff6700] hover:text-[#cc5200]"
                 >
                   <div className="flex flex-col h-full">
                     <div className="p-4 border-b border-gray-800">
                       <div className="flex items-center">
                         <Avatar className="h-10 w-10 mr-3">
                           <AvatarImage
-                            src="/placeholder.svg?height=40&width=40"
-                            alt="User"
+                            src={
+                              userAvatarUrl ||
+                              "/placeholder.svg?height=40&width=40"
+                            }
+                            alt={userDisplayName}
                           />
-                          <AvatarFallback>JD</AvatarFallback>
+                          <AvatarFallback>
+                            {getAvatarFallback(userDisplayName)}
+                          </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium">John Doe</div>
-                          <div className="text-sm text-gray-400">@johndoe</div>
+                          <div className="font-medium text-[#ff6700]">
+                            {userDisplayName}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            @{authDisplayName.toLowerCase().replace(/\s+/g, "")}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -319,13 +399,13 @@ export function NavigationBar() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 text-[#ff6700] hover:text-[#cc5200] bg-transparent hover:bg-transparent p-0 focus:ring-0 focus:outline-none"
               onClick={() => {
                 setIsSearchOpen(false);
                 setSearchQuery("");
               }}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3 bg-transparent text-[#ff6700] hover:text-[#cc5200]" />
             </Button>
             {searchResults.length > 0 && (
               <div className="absolute top-full mt-2 w-full bg-gray-900 border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50">

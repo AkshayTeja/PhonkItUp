@@ -525,8 +525,8 @@ export default function HomePage() {
         </div>
 
         <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">Your Phonkits</h2>
+          <div className="mb-6 flex flex-col items-start md:flex-row md:items-center md:justify-between">
+            <h2 className="text-2xl font-bold mb-4 md:mb-0">Your Phonkits</h2>
             <div className="flex gap-4">
               <Button
                 onClick={() => setIsPlaylistModalOpen(true)}
@@ -581,18 +581,20 @@ export default function HomePage() {
                             {playlist.tracks} tracks
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-400"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeletePlaylist(playlist.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {playlist.title !== "Liked Songs" && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-400"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeletePlaylist(playlist.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -769,43 +771,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="md:hidden bg-[#0f0f0f] border-t border-gray-800 fixed bottom-16 left-0 right-0 z-40">
-        <div className="flex items-center justify-around py-3">
-          <Link
-            href="/home"
-            className="flex flex-col items-center text-white"
-            onClick={() => handleNavigation("/home")}
-          >
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Home</span>
-          </Link>
-          <Link
-            href="/trending"
-            className="flex flex-col items-center text-gray-400"
-            onClick={() => handleNavigation("/trending")}
-          >
-            <TrendingUp className="h-5 w-5" />
-            <span className="text-xs mt-1">Trending</span>
-          </Link>
-          <Link
-            href="/search"
-            className="flex flex-col items-center text-gray-400"
-            onClick={() => handleNavigation("/search")}
-          >
-            <Search className="h-5 w-5" />
-            <span className="text-xs mt-1">Search</span>
-          </Link>
-          <Link
-            href="/profile"
-            className="flex flex-col items-center text-gray-400"
-            onClick={() => handleNavigation("/profile")}
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profile</span>
-          </Link>
-        </div>
-      </div>
-
       <MusicPlayer />
       <PlaylistModal
         isOpen={isPlaylistModalOpen}
@@ -819,36 +784,35 @@ export default function HomePage() {
         userId={userId}
       />
       <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent
-          className="sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800"
-          aria-describedby="delete-playlist-description"
-        >
+        <DialogContent className="max-w-[320px] sm:max-w-[425px] bg-[#0f0f0f] text-white border-gray-800 mx-auto left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 fixed">
           <DialogHeader>
-            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Are you sure?
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p id="delete-playlist-description" className="text-gray-400">
-              Are you sure you want to delete this playlist? This action cannot
+          <div className="py-3 sm:py-4">
+            <p className="text-gray-400 text-sm sm:text-base">
+              Are you sure you want to delete this phonkit? This action cannot
               be undone.
             </p>
           </div>
-          <div className="flex justify-center gap-4 mt-4">
+          <div className="flex justify-center gap-3 sm:gap-4 mt-3 sm:mt-4">
             <Button
               variant="outline"
               onClick={() => {
                 setIsDeleteConfirmOpen(false);
                 setPlaylistToDelete(null);
               }}
-              className="w-auto px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
+              className="w-auto px-3 sm:px-4 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-2"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmDeletePlaylist}
-              className="relative overflow-hidden w-auto px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
+              className="relative overflow-hidden w-auto px-3 sm:px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
             >
               Delete
-              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
             </Button>
           </div>
         </DialogContent>

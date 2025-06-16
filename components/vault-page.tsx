@@ -189,12 +189,6 @@ export default function VaultPage() {
             {errorMessage}
           </div>
         )}
-        {highlightedSong &&
-          !songs.some((track) => track.title === highlightedSong) && (
-            <div className="bg-yellow-500/20 border border-yellow-500 text-yellow-500 p-4 rounded-md mb-4">
-              Song "{highlightedSong}" not found in the vault.
-            </div>
-          )}
         <h1 className="text-3xl font-bold mb-6">The Vault</h1>
         <p className="text-gray-400 mb-6">
           Discover the complete collection of raw, atmospheric, and hard-hitting

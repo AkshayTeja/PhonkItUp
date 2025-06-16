@@ -283,7 +283,7 @@ export default function PlaylistPage({
     <>
       <div className="min-h-screen bg-black text-white flex flex-col">
         <NavigationBar />
-        <div className="flex-1 container mx-auto px-4 py-8">
+        <div className="flex-1 container mx-auto px-4 py-8 mb-15">
           {errorMessage && (
             <div className="bg-red-500/20 border border-red-500 text-red-500 p-4 rounded-md mb-4">
               {errorMessage}
@@ -394,16 +394,20 @@ export default function PlaylistPage({
                             .toString()
                             .padStart(2, "0")}
                         </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100"
-                          onClick={() =>
-                            handleDeleteTrack(track.playlist_track_id)
-                          }
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                        {playlist.title !== "Liked Songs" &&
+                          playlist.title !== "Phonk Essentials" &&
+                          playlist.user_id === currentUserId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="opacity-0 group-hover:opacity-100"
+                              onClick={() =>
+                                handleDeleteTrack(track.playlist_track_id)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
                         <Button
                           className="bg-[#ff6700] hover:bg-[#cc5200] h-10 w-10 rounded-full p-0 opacity-0 group-hover:opacity-100"
                           onClick={() => handlePlayTrack(track, index)}
