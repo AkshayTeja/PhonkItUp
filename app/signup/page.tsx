@@ -110,7 +110,7 @@ export default function SignupPage() {
           className="inline-flex items-center text-gray-400 hover:text-white mb-8"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to home
+          Back
         </Link>
 
         <div className="max-w-md mx-auto">
