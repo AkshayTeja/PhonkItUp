@@ -22,7 +22,7 @@ export default function LandingPage() {
         />
 
         {/* Overlay for dark tint */}
-        <div className="absolute top-0 left-0 w-full h-full bg-black/70"></div>
+        <div className="absolute top-0 left-0 w-full h-full backdrop-blur-sm bg-black/40 border border-white/10"></div>
 
         <div className="container mx-auto px-4 relative z-10 h-full flex flex-col">
           {/* Navigation */}
@@ -53,7 +53,7 @@ export default function LandingPage() {
 
           {/* Hero Content */}
           <div className="flex flex-col items-center justify-center flex-grow text-center">
-            <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-2xl p-10 w-full max-w-3xl mx-auto">
+            <div className="backdrop-blur-xl bg-black/60 border border-white/10 rounded-2xl p-10 w-full max-w-3xl mx-auto">
               <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
                 Experience <span className="text-[#ff6700]">Phonk</span> Like
                 Never Before
