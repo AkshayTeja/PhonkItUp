@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Play, TrendingUp } from "lucide-react";
 import { NavigationBar } from "@/components/navigation-bar";
-import { usePlayer } from "../context/PlayerContext"; // Import player context
+import { usePlayer } from "../context/PlayerContext";
 import { supabase } from "@/lib/supabaseClient";
 
 interface Track {
@@ -22,7 +22,7 @@ interface Track {
 export default function TrendingPage() {
   const [topTracks, setTopTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const { playTrack } = usePlayer(); // Use context to control player
+  const { playTrack } = usePlayer();
 
   useEffect(() => {
     fetchData();
@@ -52,33 +52,13 @@ export default function TrendingPage() {
   };
 
   const fetchTopTracks = async (): Promise<void> => {
-    const { data, error } = await supabase
-      .from("phonk_songs")
-      .select(
-        `
-        id,
-        song_name,
-        song_artist,
-        song_duration,
-        album_cover_url,
-        song_popularity,
-        track_url,
-        recently_played:recently_played!left(count)
-      `
-      )
-      .returns<
-        Array<{
-          id: number;
-          song_name: string;
-          song_artist: string;
-          song_duration: number;
-          album_cover_url: string | null;
-          song_popularity: number;
-          track_url: string;
-          recently_played: Array<{ count: number }>;
-        }>
-      >()
-      .limit(10, { foreignTable: undefined });
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const { data, error } = await supabase.rpc("get_top_tracks_with_trend", {
+      trend_period: oneDayAgo.toISOString(),
+      limit_count: 10,
+    });
 
     if (error) {
       console.error("Error fetching top tracks:", error.message);
@@ -86,50 +66,30 @@ export default function TrendingPage() {
     }
 
     if (data) {
-      const formattedTracks: Track[] = data
-        .map((track, index) => ({
-          id: track.id,
-          title: track.song_name,
-          artist: track.song_artist,
-          duration: formatDuration(track.song_duration),
-          plays: formatPlays(track.recently_played[0]?.count || 0),
-          cover: track.album_cover_url || "/placeholder.svg?height=80&width=80",
-          change: `+${Math.floor(Math.random() * 20) + 1}`,
-          popularity: track.song_popularity,
-          track_url: track.track_url,
-        }))
-        .sort((a, b) => {
-          const playsA =
-            parseFloat(a.plays.replace(/[KM]/, "")) *
-            (a.plays.endsWith("M")
-              ? 1000000
-              : a.plays.endsWith("K")
-              ? 1000
-              : 1);
-          const playsB =
-            parseFloat(b.plays.replace(/[KM]/, "")) *
-            (b.plays.endsWith("M")
-              ? 1000000
-              : b.plays.endsWith("K")
-              ? 1000
-              : 1);
-          return playsB - playsA; // Sort by actual play count descending
-        })
-        .slice(0, 10); // Ensure we only take top 10 after sorting
+      const formattedTracks: Track[] = data.map((track: any) => ({
+        id: track.id,
+        title: track.song_name,
+        artist: track.song_artist,
+        duration: formatDuration(track.song_duration),
+        plays: formatPlays(track.total_plays || 0),
+        cover: track.album_cover_url || "/placeholder.svg?height=80&width=80",
+        change: `+${track.trend_plays || 0}`,
+        popularity: track.total_plays || 0,
+        track_url: track.track_url,
+      }));
 
       setTopTracks(formattedTracks);
     }
   };
 
   const handleTrackPlay = (track: Track): void => {
-    // Validate track_url before playing
     if (!track.track_url) {
       console.error("Track URL is missing for:", track.title);
       return;
     }
 
     console.log("Playing track:", track.title, "URL:", track.track_url);
-    playTrack(track); // Use context to play track
+    playTrack(track);
   };
 
   const renderTopTracks = () => {

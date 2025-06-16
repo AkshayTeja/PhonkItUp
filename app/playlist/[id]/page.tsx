@@ -44,6 +44,7 @@ interface Playlist {
   id: string;
   title: string;
   cover_url: string | null;
+  user_id: string | null;
   tracks: Track[];
 }
 
@@ -60,6 +61,7 @@ export default function PlaylistPage({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlaylist = async () => {
@@ -68,8 +70,8 @@ export default function PlaylistPage({
           data: { user },
           error: authError,
         } = await supabase.auth.getUser();
-        if (authError) throw new Error(`Auth error: ${authError.message}`);
-        if (!user) throw new Error("No user found");
+        if (authError) console.warn("Auth error:", authError.message);
+        setCurrentUserId(user?.id || null);
 
         const { data: playlistData, error: playlistError } = await supabase
           .from("playlists")
@@ -78,6 +80,7 @@ export default function PlaylistPage({
             id,
             title,
             cover_url,
+            user_id,
             playlist_tracks (
               id,
               track_id,
@@ -94,27 +97,35 @@ export default function PlaylistPage({
           `
           )
           .eq("id", resolvedParams.id)
-          .eq("user_id", user.id)
           .single();
 
-        if (playlistError)
+        if (playlistError) {
+          console.error("Playlist fetch error:", playlistError);
           throw new Error(`Playlist fetch error: ${playlistError.message}`);
-        if (!playlistData) throw new Error("Playlist not found");
+        }
+        if (!playlistData) {
+          console.error("No playlist data returned");
+          throw new Error("Playlist not found");
+        }
 
-        const tracks: Track[] = playlistData.playlist_tracks.map((pt: any) => ({
-          id: pt.phonk_songs.id,
-          title: pt.phonk_songs.song_name,
-          artist: pt.phonk_songs.song_artist,
-          cover:
-            pt.phonk_songs.album_cover_url ||
-            "/placeholder.svg?height=80&width=80",
-          track_url: pt.phonk_songs.track_url,
-          duration: pt.phonk_songs.song_duration?.toString() || "0",
-          plays: "0",
-          change: "0",
-          popularity: pt.phonk_songs.song_popularity || 0,
-          playlist_track_id: pt.id,
-        }));
+        console.log("Playlist Data:", JSON.stringify(playlistData, null, 2));
+
+        const tracks: Track[] = playlistData.playlist_tracks
+          ? playlistData.playlist_tracks.map((pt: any) => ({
+              id: pt.phonk_songs.id,
+              title: pt.phonk_songs.song_name,
+              artist: pt.phonk_songs.song_artist,
+              cover:
+                pt.phonk_songs.album_cover_url ||
+                "/placeholder.svg?height=80&width=80",
+              track_url: pt.phonk_songs.track_url,
+              duration: pt.phonk_songs.song_duration?.toString() || "0",
+              plays: "0",
+              change: "0",
+              popularity: pt.phonk_songs.song_popularity || 0,
+              playlist_track_id: pt.id,
+            }))
+          : [];
 
         console.log("Fetched playlist:", {
           id: playlistData.id,
@@ -128,9 +139,10 @@ export default function PlaylistPage({
           title: playlistData.title,
           cover_url:
             playlistData.cover_url || "/placeholder.svg?height=300&width=300",
+          user_id: playlistData.user_id,
           tracks,
         });
-        setNewPlaylistName(playlistData.title); // Initialize rename input with current title
+        setNewPlaylistName(playlistData.title);
       } catch (error: any) {
         console.error("Error fetching playlist:", error.message || error);
         setErrorMessage("Failed to load playlist. Please try again.");
@@ -295,28 +307,45 @@ export default function PlaylistPage({
                   </p>
                   <div>
                     <div className="flex gap-4">
-                      <Button
-                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                        onClick={() => setIsRenameDialogOpen(true)}
-                      >
-                        <Edit2 className="mr-1 h-4 w-4" /> Rename
-                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                      </Button>
-                      <Button
-                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                        onClick={() => handleNavigation("/vault")}
-                      >
-                        <Heart className="mr-1 h-4 w-4" /> Add More
-                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeletePlaylist}
-                        className="relative overflow-hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                      >
-                        <Trash2 className="mr-1 h-4 w-4" /> Delete Playlist
-                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                      </Button>
+                      {playlist.user_id === currentUserId && (
+                        <>
+                          {playlist.title === "Liked Songs" ? (
+                            <Button
+                              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                              onClick={() => handleNavigation("/vault")}
+                            >
+                              <Heart className="mr-1 h-4 w-4" /> Add More
+                              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                                onClick={() => setIsRenameDialogOpen(true)}
+                              >
+                                <Edit2 className="mr-1 h-4 w-4" /> Rename
+                                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                              </Button>
+                              <Button
+                                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                                onClick={() => handleNavigation("/vault")}
+                              >
+                                <Heart className="mr-1 h-4 w-4" /> Add More
+                                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                className="relative overflow-hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                                onClick={handleDeletePlaylist}
+                              >
+                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                                Playlist
+                                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                              </Button>
+                            </>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

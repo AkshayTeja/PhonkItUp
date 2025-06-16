@@ -512,12 +512,14 @@ export default function HomePage() {
                 The ultimate collection of the most iconic phonk tracks that
                 defined the genre.
               </p>
-              <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105">
-                <span className="relative z-10 flex items-center">
-                  <Play className="mr-2 h-4 w-4" /> Play All
-                </span>
-                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-              </Button>
+              <Link href="/playlist/b1d6c0e8-4183-403d-a5f8-1a4568631b43">
+                <Button className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105">
+                  <span className="relative z-10 flex items-center">
+                    <Play className="mr-2 h-4 w-4" /> Play All
+                  </span>
+                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
