@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   title: "PhonkItUp",
   description: "The best phonk music app",
   generator: "v0.dev",
+  icons: {
+    icon: "/skull.jpg",
+  },
 };
 
 export default function RootLayout({

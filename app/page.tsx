@@ -10,7 +10,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <div className="relative h-screen overflow-hidden">
+      <div className="relative h-[100vh] sm:h-screen overflow-hidden">
         {/* Video background */}
         <video
           autoPlay
@@ -26,12 +26,15 @@ export default function LandingPage() {
 
         <div className="container mx-auto px-4 relative z-10 h-full flex flex-col">
           {/* Navigation */}
-          <nav className="flex items-center justify-between py-6">
+          <nav className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Volume2 className="h-8 w-8 text-[#ff6700]" />
-              <span className="text-2xl font-bold tracking-tighter">
-                PhonkItUp
-              </span>
+              <Image
+                src="/logo.jpg" // Replace with your actual image path
+                alt="PhonkItUp Logo"
+                width={72} // Increased width for mobile (48px)
+                height={72} // Increased height for mobile (48px)
+                className="h-28 w-28 md:h-24 md:w-32 object-contain" // 48x48 mobile, 56x56 laptop
+              />
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login">

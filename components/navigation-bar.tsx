@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -212,8 +213,13 @@ export function NavigationBar() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <Volume2 className="h-6 w-6 text-[#ff6700]" />
-              <span className="text-xl font-bold">PhonkItUp</span>
+              <Image
+                src="/skull.png" // Replace with your actual image path
+                alt="PhonkItUp Logo"
+                width={82} // Increased width for mobile (48px)
+                height={82} // Increased height for mobile (48px)
+                className="h-12 w-12 md:h-14 md:w-14 object-contain" // 48x48 mobile, 56x56 laptop
+              />
             </div>
 
             <div className="hidden md:flex items-center space-x-8">

@@ -169,15 +169,17 @@ export default function MusicPlayer() {
                 />
               </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={skipBackward}
-                className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!hasPreviousTrack || isLoading}
-              >
-                <SkipBack className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
-              </Button>
+              {playlistName && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={skipBackward}
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!hasPreviousTrack || isLoading}
+                >
+                  <SkipBack className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
+                </Button>
+              )}
 
               <Button
                 variant="ghost"
@@ -213,15 +215,17 @@ export default function MusicPlayer() {
                 <FastForward className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
               </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={skipForward}
-                className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!hasNextTrack || isLoading}
-              >
-                <SkipForward className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
-              </Button>
+              {playlistName && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={skipForward}
+                  className="bg-[#ff6700] hover:bg-[#cc5200] sm:h-8 sm:w-8 h-9 w-9 rounded-full p-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!hasNextTrack || isLoading}
+                >
+                  <SkipForward className="sm:h-4 sm:w-4 h-5 w-5 text-white" />
+                </Button>
+              )}
             </div>
 
             <div className="w-full flex items-center gap-2 mt-1 m-2">

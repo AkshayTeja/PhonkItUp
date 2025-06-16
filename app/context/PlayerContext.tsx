@@ -75,6 +75,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const animationRef = useRef<number | null>(null);
   const isDragging = useRef(false);
   const lastUpdateTime = useRef<number>(0);
+  const lastToggleLoopTime = useRef<number>(0);
 
   // Log queue changes
   useEffect(() => {
@@ -112,13 +113,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
     };
   }, []);
-
-  // Update audio loop property when isLooping changes
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.loop = isLooping;
-    }
-  }, [isLooping]);
 
   // Update volume
   useEffect(() => {
@@ -308,6 +302,19 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         console.log("Media Session: Seek backward triggered");
         skipBackwardSeconds();
       });
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        console.log("Media Session: Seek to triggered", details.seekTime);
+        if (audioRef.current && details.seekTime !== undefined) {
+          const newTime = Math.max(0, Math.min(details.seekTime, duration));
+          audioRef.current.currentTime = newTime;
+          setCurrentTime(newTime);
+          navigator.mediaSession.setPositionState({
+            duration: duration,
+            playbackRate: audioRef.current.playbackRate,
+            position: newTime,
+          });
+        }
+      });
 
       return () => {
         navigator.mediaSession.setActionHandler("play", null);
@@ -316,6 +323,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         navigator.mediaSession.setActionHandler("previoustrack", null);
         navigator.mediaSession.setActionHandler("seekforward", null);
         navigator.mediaSession.setActionHandler("seekbackward", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
       };
     }
   }, [currentTrack, isPlaying, queue, currentTrackIndex]);
@@ -484,11 +492,25 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const toggleLoop = () => {
-    console.log("Toggling loop:", !isLooping);
-    setIsLooping(!isLooping);
-    if (audioRef.current) {
-      audioRef.current.loop = !isLooping;
+    const now = Date.now();
+    // Debounce: Ignore if called within 300ms of the last toggle
+    if (now - lastToggleLoopTime.current < 300) {
+      console.log("toggleLoop debounced: too soon since last toggle");
+      return;
     }
+    lastToggleLoopTime.current = now;
+
+    console.log("Toggling loop:", !isLooping);
+    setIsLooping((prev) => {
+      const newLoopState = !prev;
+      if (audioRef.current) {
+        audioRef.current.loop = newLoopState;
+        console.log("Audio loop property set to:", newLoopState);
+      } else {
+        console.warn("Audio element not ready when toggling loop");
+      }
+      return newLoopState;
+    });
   };
 
   const skipForward = () => {
@@ -611,12 +633,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         audioRef.current.currentTime + 10,
         duration
       );
-      setCurrentTime(audioRef.current.currentTime);
+      const newTime = audioRef.current.currentTime;
+      setCurrentTime(newTime);
       if (isMediaSessionSupported) {
         navigator.mediaSession.setPositionState({
           duration: duration,
           playbackRate: audioRef.current.playbackRate,
-          position: audioRef.current.currentTime,
+          position: newTime,
         });
       }
     }
@@ -628,12 +651,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         audioRef.current.currentTime - 10,
         0
       );
-      setCurrentTime(audioRef.current.currentTime);
+      const newTime = audioRef.current.currentTime;
+      setCurrentTime(newTime);
       if (isMediaSessionSupported) {
         navigator.mediaSession.setPositionState({
           duration: duration,
           playbackRate: audioRef.current.playbackRate,
-          position: audioRef.current.currentTime,
+          position: newTime,
         });
       }
     }
@@ -642,14 +666,23 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const syncTime = () => {
     if (audioRef.current && !isDragging.current && isPlaying) {
       const now = performance.now();
+      const actualTime = audioRef.current.currentTime;
+      // Check for a significant discrepancy (e.g., >1 second) that might indicate an external seek
+      if (Math.abs(actualTime - currentTime) > 1) {
+        console.log(
+          "Detected external seek, updating currentTime:",
+          actualTime
+        );
+        setCurrentTime(actualTime);
+      }
       if (now - lastUpdateTime.current >= 1000) {
-        setCurrentTime(audioRef.current.currentTime);
+        setCurrentTime(actualTime);
         lastUpdateTime.current = now;
         if (isMediaSessionSupported) {
           navigator.mediaSession.setPositionState({
             duration: duration,
             playbackRate: audioRef.current.playbackRate,
-            position: audioRef.current.currentTime,
+            position: actualTime,
           });
         }
       }
@@ -662,12 +695,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const handleSetCurrentTime = (time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
-      setCurrentTime(time);
+      const newTime = audioRef.current.currentTime;
+      setCurrentTime(newTime);
       if (isMediaSessionSupported) {
         navigator.mediaSession.setPositionState({
           duration: duration,
           playbackRate: audioRef.current.playbackRate,
-          position: time,
+          position: newTime,
         });
       }
     }
