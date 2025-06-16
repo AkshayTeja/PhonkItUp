@@ -120,6 +120,13 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isLooping]);
 
+  // Update volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
   // Ensure "Liked Songs" playlist exists on user login
   useEffect(() => {
     const ensureLikedSongsPlaylist = async () => {
@@ -189,9 +196,27 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           setIsPlaying(true);
           setIsLoading(false);
           animationRef.current = requestAnimationFrame(syncTime);
-          // Update Media Session play state
           if (isMediaSessionSupported) {
             navigator.mediaSession.playbackState = "playing";
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: currentTrack.title,
+              artist: currentTrack.artist,
+              artwork: [
+                {
+                  src:
+                    currentTrack.cover || "/placeholder.svg?height=96&width=96",
+                  sizes: "96x96",
+                  type: "image/png",
+                },
+                {
+                  src:
+                    currentTrack.cover ||
+                    "/placeholder.svg?height=192&width=192",
+                  sizes: "192x192",
+                  type: "image/png",
+                },
+              ],
+            });
           }
         })
         .catch((error) => {
@@ -218,13 +243,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentTrack, isLooping]);
 
-  // Update volume
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
-    }
-  }, [volume]);
-
   // Check if track is liked
   useEffect(() => {
     const checkIfLiked = async () => {
@@ -245,7 +263,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           .from("liked_songs")
           .select("id")
           .eq("user_id", user.id)
-          .eq("track_id", Number(currentTrack.id)) // Cast to number for BIGINT
+          .eq("track_id", Number(currentTrack.id))
           .maybeSingle();
         if (error) {
           console.error("Error checking liked status:", error);
@@ -262,6 +280,45 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     };
     checkIfLiked();
   }, [currentTrack]);
+
+  // Media Session action handlers
+  useEffect(() => {
+    if (isMediaSessionSupported) {
+      navigator.mediaSession.setActionHandler("play", () => {
+        console.log("Media Session: Play triggered");
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler("pause", () => {
+        console.log("Media Session: Pause triggered");
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        console.log("Media Session: Next triggered");
+        skipForward();
+      });
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        console.log("Media Session: Previous triggered");
+        skipBackward();
+      });
+      navigator.mediaSession.setActionHandler("seekforward", () => {
+        console.log("Media Session: Seek forward triggered");
+        skipForwardSeconds();
+      });
+      navigator.mediaSession.setActionHandler("seekbackward", () => {
+        console.log("Media Session: Seek backward triggered");
+        skipBackwardSeconds();
+      });
+
+      return () => {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("seekforward", null);
+        navigator.mediaSession.setActionHandler("seekbackward", null);
+      };
+    }
+  }, [currentTrack, isPlaying, queue, currentTrackIndex]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current && !isDragging.current) {
@@ -381,54 +438,29 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTrackIndex(
       newQueue.length > 0 ? index : updatedQueue.indexOf(track)
     );
-
-    // Set Media Session metadata
-    if (isMediaSessionSupported && track) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.title,
-        artist: track.artist,
-        artwork: [
-          {
-            src: track.cover || "/placeholder.svg?height=96&width=96",
-            sizes: "96x96",
-            type: "image/png",
-          },
-          {
-            src: track.cover || "/placeholder.svg?height=192&width=192",
-            sizes: "192x192",
-            type: "image/png",
-          },
-        ],
-      });
-
-      // Set action handlers
-      navigator.mediaSession.setActionHandler("play", () => togglePlay());
-      navigator.mediaSession.setActionHandler("pause", () => togglePlay());
-      navigator.mediaSession.setActionHandler("nexttrack", () => skipForward());
-      navigator.mediaSession.setActionHandler("previoustrack", () =>
-        skipBackward()
-      );
-      navigator.mediaSession.setActionHandler("seekforward", () =>
-        skipForwardSeconds()
-      );
-      navigator.mediaSession.setActionHandler("seekbackward", () =>
-        skipBackwardSeconds()
-      );
-    }
   };
 
   const togglePlay = () => {
+    console.log("togglePlay called:", {
+      isPlaying,
+      currentTrack: currentTrack?.title,
+    });
     if (!currentTrack || !currentTrack.track_url || !audioRef.current) {
       console.warn("No track selected or track URL missing");
       setError("No track selected");
       return;
     }
     if (isPlaying) {
-      audioRef.current.pause();
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      setIsPlaying(false);
-      if (isMediaSessionSupported) {
-        navigator.mediaSession.playbackState = "paused";
+      try {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        if (isMediaSessionSupported) {
+          navigator.mediaSession.playbackState = "paused";
+        }
+      } catch (error) {
+        console.error("Error pausing track:", error);
+        setError("Failed to pause track");
       }
     } else {
       audioRef.current
@@ -655,7 +687,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Ensure "Liked Songs" playlist exists
       const { data: playlist, error: selectPlaylistError } = await supabase
         .from("playlists")
         .select("id")
@@ -695,7 +726,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         playlistId = playlist.id;
       }
 
-      // Check if song is already liked
       const trackId = Number(currentTrack.id);
       if (isNaN(trackId)) {
         console.error("Invalid track_id:", currentTrack.id);
@@ -717,7 +747,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (existingLike) {
-        // Unlike the song
         const { error } = await supabase
           .from("liked_songs")
           .delete()
@@ -728,7 +757,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // Remove from "Liked Songs" playlist
         const { error: deletePlaylistError } = await supabase
           .from("playlist_tracks")
           .delete()
@@ -746,7 +774,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
 
         setLiked(false);
       } else {
-        // Like the song
         const { error } = await supabase
           .from("liked_songs")
           .insert({ user_id: user.id, track_id: trackId });
@@ -756,7 +783,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        // Check if track is already in playlist to avoid duplicates
         const { data: existingPlaylistTrack } = await supabase
           .from("playlist_tracks")
           .select("id")
@@ -765,7 +791,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle();
 
         if (!existingPlaylistTrack) {
-          // Add to "Liked Songs" playlist
           const { error: insertPlaylistError } = await supabase
             .from("playlist_tracks")
             .insert({

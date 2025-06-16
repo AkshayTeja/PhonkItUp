@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NavigationBar } from "@/components/navigation-bar";
-import MusicPlayer from "@/components/music-player";
+import MusicPlayer from "../../../components/music-player";
 import { supabase } from "@/lib/supabaseClient";
 import { usePlayer } from "../../context/PlayerContext";
 import {
@@ -292,7 +292,7 @@ export default function PlaylistPage({
 
           {playlist && (
             <>
-              <div className="flex flex-col md:flex-row items-center gap-6 mb-10">
+              <div className="flex flex-col md:flex-row items-center gap-6 mb-10 pb-3 p-5">
                 <Image
                   src={playlist.cover_url}
                   alt={playlist.title}
@@ -360,8 +360,8 @@ export default function PlaylistPage({
                       Add some tracks to this playlist
                     </p>
                     <Link
-                      href="/search"
-                      onClick={() => handleNavigation("/search")}
+                      href="/vault"
+                      onClick={() => handleNavigation("/vault")}
                     >
                       <Button className="bg-[#ff6700] hover:bg-[#cc5200]">
                         Find Tracks
@@ -421,43 +421,6 @@ export default function PlaylistPage({
               </div>
             </>
           )}
-        </div>
-
-        <div className="md:hidden bg-[#0f0f0f] border-t border-gray-800 fixed bottom-16 left-0 right-0 z-40">
-          <div className="flex items-center justify-around py-3">
-            <Link
-              href="/home"
-              className="flex flex-col items-center text-white"
-              onClick={() => handleNavigation("/home")}
-            >
-              <Home className="h-5 w-5" />
-              <span className="text-xs mt-1">Home</span>
-            </Link>
-            <Link
-              href="/trending"
-              className="flex flex-col items-center text-gray-400"
-              onClick={() => handleNavigation("/trending")}
-            >
-              <TrendingUp className="h-5 w-5" />
-              <span className="text-xs mt-1">Trending</span>
-            </Link>
-            <Link
-              href="/search"
-              className="flex flex-col items-center text-gray-400"
-              onClick={() => handleNavigation("/search")}
-            >
-              <Search className="h-5 w-5" />
-              <span className="text-xs mt-1">Search</span>
-            </Link>
-            <Link
-              href="/profile"
-              className="flex flex-col items-center text-gray-400"
-              onClick={() => handleNavigation("/profile")}
-            >
-              <User className="h-5 w-5" />
-              <span className="text-xs mt-1">Profile</span>
-            </Link>
-          </div>
         </div>
 
         <MusicPlayer />

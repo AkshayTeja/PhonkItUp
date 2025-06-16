@@ -143,7 +143,7 @@ export default function TrendingPage() {
           {topTracks.map((track, index) => (
             <div
               key={track.id}
-              className="bg-gray-800 rounded-lg p-4 hover:bg-[#cc5300] cursor-pointer flex items-center relative shine"
+              className="bg-gray-900 rounded-lg p-4 hover:bg-[#cc5300] cursor-pointer flex items-center relative shine"
               onClick={() => handleTrackPlay(track)}
             >
               <div className="flex items-center w-full">
