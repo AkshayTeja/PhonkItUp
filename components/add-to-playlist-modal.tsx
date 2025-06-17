@@ -135,18 +135,20 @@ export function AddToPlaylistModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0f0f0f] text-white">
+      <DialogContent className="max-w-[280px] sm:max-w-[360px] bg-[#0f0f0f] text-white border-gray-800">
         <DialogHeader>
-          <DialogTitle>Add to Phonkit</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">
+            Add to Phonkit
+          </DialogTitle>
         </DialogHeader>
         {error && (
-          <div className="bg-red-500/20 border border-red-500 text-red-500 p-4 rounded-md mb-4">
+          <div className="bg-red-500/20 border border-red-500 text-red-500 p-2 rounded-md mb-2 text-xs sm:text-sm">
             {error}
           </div>
         )}
-        <div className="space-y-4">
+        <div className="space-y-2">
           {playlists.length === 0 ? (
-            <p className="text-gray-400 text-center">
+            <p className="text-gray-400 text-center text-xs sm:text-sm">
               No playlists available. Create a playlist to add this track.
             </p>
           ) : (
@@ -154,7 +156,7 @@ export function AddToPlaylistModal({
               <Button
                 key={playlist.id}
                 onClick={() => handleSelectPlaylist(playlist.id)}
-                className={`w-full text-white ${
+                className={`w-full text-white text-xs sm:text-sm py-1.5 ${
                   selectedPlaylistId === playlist.id
                     ? "bg-[#ff6700] hover:bg-[#cc5300]"
                     : "bg-black hover:bg-gray-800"
@@ -165,11 +167,11 @@ export function AddToPlaylistModal({
             ))
           )}
         </div>
-        <div className="mt-4 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <Button
             onClick={handleAddToPlaylist}
             disabled={!selectedPlaylistId || isLoading}
-            className={`inline-flex items-center justify-center relative overflow-hidden text-white px-4 py-2 transition-transform duration-300 transform group ${
+            className={`inline-flex items-center justify-center relative overflow-hidden text-white px-3 py-1 text-xs sm:text-sm transition-transform duration-300 transform group ${
               selectedPlaylistId && !isLoading
                 ? "bg-[#ff6700] hover:bg-[#cc5300] hover:scale-105"
                 : "bg-gray-600 cursor-not-allowed"
@@ -179,7 +181,7 @@ export function AddToPlaylistModal({
               {isLoading ? "Adding..." : "Add"}
             </span>
             {selectedPlaylistId && !isLoading && (
-              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
             )}
           </Button>
         </div>

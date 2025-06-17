@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Volume2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,13 @@ export default function LoginPage() {
 
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-center mb-8">
-            <Volume2 className="h-8 w-8 text-[#ff6700] mr-2" />
+            <Image
+              src="/skull.png" // Replace with your actual image path
+              alt="PhonkItUp Logo"
+              width={82} // Increased width for mobile (48px)
+              height={82} // Increased height for mobile (48px)
+              className="h-12 w-12 md:h-14 md:w-14 object-contain" // 48x48 mobile, 56x56 laptop
+            />
             <span className="text-2xl font-bold">PhonkItUp</span>
           </div>
 

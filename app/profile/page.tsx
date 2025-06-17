@@ -614,13 +614,6 @@ export default function ProfilePage() {
                         Create a Phonkit
                         <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                       </Button>
-                      <Button
-                        onClick={() => handleNavigation("/profile")}
-                        className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                      >
-                        View All
-                        <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                      </Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -862,6 +855,87 @@ export default function ProfilePage() {
               className="relative overflow-hidden w-auto px-3 sm:px-4 bg-red-500 hover:bg-red-600 text-white border-none py-2 text-sm transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center space-x-2"
             >
               Delete
+              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-[320px] sm:max-w-[400px] bg-[#0f0f0f] text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 space-y-4">
+            <div>
+              <Label htmlFor="name" className="text-sm text-gray-200">
+                Name
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-gray-900 border-gray-700 text-white text-sm mt-1"
+                placeholder="Enter your name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="username" className="text-sm text-gray-200">
+                Username
+              </Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="bg-gray-900 border-gray-700 text-white text-sm mt-1"
+                placeholder="Enter your username"
+              />
+            </div>
+            <div>
+              <Label htmlFor="profilePic" className="text-sm text-gray-200">
+                Profile Picture
+              </Label>
+              <Input
+                id="profilePic"
+                type="file"
+                accept="image/jpeg,image/png,image/gif"
+                onChange={(e) => setProfilePicFile(e.target.files?.[0] || null)}
+                className="bg-gray-900 border-gray-700 text-white text-sm mt-1 file:text-[#ff6700] file:cursor-pointer"
+              />
+            </div>
+            <div>
+              <Label htmlFor="wallpaper" className="text-sm text-gray-200">
+                Wallpaper
+              </Label>
+              <Input
+                id="wallpaper"
+                type="file"
+                accept="image/jpeg,image/png,image/gif"
+                onChange={(e) => setWallpaperFile(e.target.files?.[0] || null)}
+                className="bg-gray-900 border-gray-700 text-white text-sm mt-1 file:text-[#ff6700] file:cursor-pointer"
+              />
+            </div>
+            {errorMessage && (
+              <p className="text-red-500 text-sm">{errorMessage}</p>
+            )}
+          </div>
+          <div className="flex justify-center gap-3 mt-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditModalOpen(false);
+                setProfilePicFile(null);
+                setWallpaperFile(null);
+                setErrorMessage(null);
+              }}
+              className="w-auto px-3 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-sm py-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProfileUpdate}
+              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105"
+            >
+              Save
               <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />
             </Button>
           </div>

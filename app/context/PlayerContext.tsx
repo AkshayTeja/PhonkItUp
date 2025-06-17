@@ -76,6 +76,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const isDragging = useRef(false);
   const lastUpdateTime = useRef<number>(0);
   const lastToggleLoopTime = useRef<number>(0);
+  const mediaSessionUpdateRef = useRef<number | null>(null);
 
   // Log queue changes
   useEffect(() => {
@@ -110,6 +111,9 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audio.src = "";
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+      }
+      if (mediaSessionUpdateRef.current) {
+        clearInterval(mediaSessionUpdateRef.current);
       }
     };
   }, []);
@@ -182,7 +186,17 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       audioRef.current.loop = isLooping;
       audioRef.current.load();
       audioRef.current.onloadedmetadata = () => {
-        setDuration(audioRef.current!.duration);
+        const newDuration = audioRef.current!.duration;
+        setDuration(newDuration);
+
+        // Initialize MediaSession position state
+        if (isMediaSessionSupported) {
+          navigator.mediaSession.setPositionState({
+            duration: newDuration,
+            playbackRate: 1.0,
+            position: 0,
+          });
+        }
       };
       audioRef.current
         .play()
@@ -275,6 +289,27 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     checkIfLiked();
   }, [currentTrack]);
 
+  useEffect(() => {
+    if (isPlaying && duration > 0) {
+      // Update MediaSession position every second
+      mediaSessionUpdateRef.current = window.setInterval(() => {
+        updateMediaSessionPosition();
+      }, 1000);
+    } else {
+      if (mediaSessionUpdateRef.current) {
+        clearInterval(mediaSessionUpdateRef.current);
+        mediaSessionUpdateRef.current = null;
+      }
+    }
+
+    return () => {
+      if (mediaSessionUpdateRef.current) {
+        clearInterval(mediaSessionUpdateRef.current);
+        mediaSessionUpdateRef.current = null;
+      }
+    };
+  }, [isPlaying, duration]);
+
   // Media Session action handlers
   useEffect(() => {
     if (isMediaSessionSupported) {
@@ -331,6 +366,20 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
   const handleTimeUpdate = () => {
     if (audioRef.current && !isDragging.current) {
       setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const updateMediaSessionPosition = () => {
+    if (isMediaSessionSupported && audioRef.current && duration > 0) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: duration,
+          playbackRate: audioRef.current.playbackRate,
+          position: audioRef.current.currentTime,
+        });
+      } catch (error) {
+        console.warn("Failed to update MediaSession position:", error);
+      }
     }
   };
 

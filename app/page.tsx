@@ -27,14 +27,15 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 relative z-10 h-full flex flex-col">
           {/* Navigation */}
           <nav className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center ms-2 m-4">
               <Image
-                src="/logo.jpg" // Replace with your actual image path
+                src="/skull.png" // Replace with your actual image path
                 alt="PhonkItUp Logo"
-                width={72} // Increased width for mobile (48px)
-                height={72} // Increased height for mobile (48px)
-                className="h-28 w-28 md:h-24 md:w-32 object-contain" // 48x48 mobile, 56x56 laptop
+                width={82} // Increased width for mobile (48px)
+                height={82} // Increased height for mobile (48px)
+                className="h-12 w-12 md:h-14 md:w-14 object-contain" // 48x48 mobile, 56x56 laptop
               />
+              <span className="text-2xl font-bold">PhonkItUp</span>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -55,7 +56,7 @@ export default function LandingPage() {
           </nav>
 
           {/* Hero Content */}
-          <div className="flex flex-col items-center justify-center flex-grow text-center">
+          <div className="flex flex-col items-center justify-start mt-20 flex-grow text-center">
             <div className="backdrop-blur-xl bg-black/60 border border-white/10 rounded-2xl p-10 w-full max-w-3xl mx-auto">
               <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
                 Experience <span className="text-[#ff6700]">Phonk</span> Like

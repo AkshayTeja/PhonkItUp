@@ -55,10 +55,13 @@ export default function TrendingPage() {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
-    const { data, error } = await supabase.rpc("get_top_tracks_with_trend", {
-      trend_period: oneDayAgo.toISOString(),
-      limit_count: 10,
-    });
+    const { data, error } = await supabase.rpc(
+      "get_global_top_tracks_with_trend",
+      {
+        trend_period: oneDayAgo.toISOString(),
+        limit_count: 10,
+      }
+    );
 
     if (error) {
       console.error("Error fetching top tracks:", error.message);
@@ -199,7 +202,7 @@ export default function TrendingPage() {
       <div className="flex-1 container mx-auto px-4 py-8 pb-24">
         <div className="flex items-center mb-8">
           <TrendingUp className="h-8 w-8 text-[#ff6700] mr-3" />
-          <h1 className="text-3xl font-bold">Top Tracks</h1>
+          <h1 className="text-3xl font-bold">Global Top Tracks</h1>
         </div>
         {renderTopTracks()}
       </div>
