@@ -74,35 +74,37 @@ export default function ResetPasswordPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="max-w-md mx-auto">
-            <div className="flex items-center justify-center mb-8">
+            <div className="flex items-center justify-center mb-6 sm:mb-8">
               <Image
                 src="/skull.png"
                 alt="PhonkItUp Logo"
                 width={82}
                 height={82}
-                className="h-12 w-12 md:h-14 md:w-14 object-contain"
+                className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 object-contain"
               />
-              <span className="text-2xl font-bold">PhonkItUp</span>
+              <span className="text-xl sm:text-2xl font-bold">PhonkItUp</span>
             </div>
 
-            <div className="bg-[#0f0f0f] p-8 rounded-xl border border-gray-800 text-center">
-              <div className="flex justify-center mb-6">
-                <div className="rounded-full bg-green-100 p-3">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="bg-[#0f0f0f] p-6 sm:p-8 rounded-xl border border-gray-800 text-center">
+              <div className="flex justify-center mb-4 sm:mb-6">
+                <div className="rounded-full bg-green-100 p-2 sm:p-3">
+                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                 </div>
               </div>
 
-              <h1 className="text-2xl font-bold mb-4">Password Updated!</h1>
+              <h1 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">
+                Password Updated!
+              </h1>
 
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-400 text-sm sm:text-base mb-4 sm:mb-6">
                 Your password has been successfully updated. You'll be
                 redirected to the login page shortly.
               </p>
 
               <Link href="/login">
-                <Button className="w-full bg-[#ff6700] hover:bg-[#cc5300] text-white">
+                <Button className="w-full bg-[#ff6700] hover:bg-[#cc5300] text-white text-sm sm:text-base py-2 sm:py-3">
                   Go to Login
                 </Button>
               </Link>
@@ -115,41 +117,43 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <Link
           href="/login"
-          className="inline-flex items-center text-gray-400 hover:text-white mb-8"
+          className="inline-flex items-center text-gray-400 hover:text-white mb-6 sm:mb-8"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Login
         </Link>
 
         <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center mb-6 sm:mb-8">
             <Image
               src="/skull.png"
               alt="PhonkItUp Logo"
               width={82}
               height={82}
-              className="h-12 w-12 md:h-14 md:w-14 object-contain"
+              className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 object-contain"
             />
-            <span className="text-2xl font-bold">PhonkItUp</span>
+            <span className="text-xl sm:text-2xl font-bold">PhonkItUp</span>
           </div>
 
-          <div className="bg-[#0f0f0f] p-8 rounded-xl border border-gray-800">
-            <div className="text-center mb-6">
-              <div className="flex justify-center mb-4">
-                <div className="rounded-full bg-[#ff6700] bg-opacity-20 p-3">
-                  <Lock className="h-8 w-8 text-[#ff6700]" />
+          <div className="bg-[#0f0f0f] p-6 sm:p-8 rounded-xl border border-gray-800">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="flex justify-center mb-3 sm:mb-4">
+                <div className="rounded-full bg-[#ff6700] bg-opacity-20 p-2 sm:p-3">
+                  <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-[#ff6700]" />
                 </div>
               </div>
-              <h1 className="text-2xl font-bold mb-2">Reset your password</h1>
-              <p className="text-gray-400 text-sm">
+              <h1 className="text-xl sm:text-2xl font-bold mb-2">
+                Reset your password
+              </h1>
+              <p className="text-gray-400 text-xs sm:text-sm">
                 Enter your new password below.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
                 <div className="relative">
@@ -158,7 +162,7 @@ export default function ResetPasswordPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your new password"
                     required
-                    className="bg-black border-gray-700 focus:border-[#ff6700] pr-10"
+                    className="bg-black border-gray-700 focus:border-[#ff6700] pr-10 text-sm sm:text-base"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -171,9 +175,9 @@ export default function ResetPasswordPage() {
                     }
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
+                      <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </button>
                 </div>
@@ -187,7 +191,7 @@ export default function ResetPasswordPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm your new password"
                     required
-                    className="bg-black border-gray-700 focus:border-[#ff6700] pr-10"
+                    className="bg-black border-gray-700 focus:border-[#ff6700] pr-10 text-sm sm:text-base"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
@@ -200,20 +204,22 @@ export default function ResetPasswordPage() {
                     }
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5" />
+                      <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </button>
                 </div>
               </div>
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-xs sm:text-sm">{error}</p>
+              )}
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-6 py-3 text-base transition-transform duration-300 transform group hover:scale-105 w-full"
+                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base transition-transform duration-300 transform group hover:scale-105 w-full"
               >
                 <span className="relative z-10">
                   {isLoading ? "Updating..." : "Update Password"}
