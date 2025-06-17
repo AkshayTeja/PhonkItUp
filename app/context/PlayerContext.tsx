@@ -397,18 +397,62 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
       isLooping,
     });
 
-    if (!isLooping) {
+    if (isLooping) {
+      // Loop is handled by audioRef.current.loop, no action needed
+      return;
+    }
+
+    // If not looping and there’s a next track, skip to it
+    if (queue.length > 0 && currentTrackIndex < queue.length - 1) {
+      console.log(
+        "Skipping to next track:",
+        queue[currentTrackIndex + 1].title
+      );
+      setCurrentTrack(queue[currentTrackIndex + 1]);
+      setCurrentTrackIndex(currentTrackIndex + 1);
+      setCurrentTime(0);
+      setIsPlaying(true);
+      if (isMediaSessionSupported) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: queue[currentTrackIndex + 1].title,
+          artist: queue[currentTrackIndex + 1].artist,
+          artwork: [
+            {
+              src:
+                queue[currentTrackIndex + 1].cover ||
+                "/placeholder.svg?height=96&width=96",
+              sizes: "96x96",
+              type: "image/png",
+            },
+            {
+              src:
+                queue[currentTrackIndex + 1].cover ||
+                "/placeholder.svg?height=192&width=192",
+              sizes: "192x192",
+              type: "image/png",
+            },
+          ],
+        });
+        navigator.mediaSession.playbackState = "playing";
+      }
+    } else {
+      // No next track, stop playback
+      console.log("No next track, stopping playback");
       setIsPlaying(false);
+      setCurrentTrack(null);
+      setCurrentTrackIndex(-1);
+      setCurrentTime(0);
+      setPlaylistName(null);
+      setError("No more tracks in queue");
       if (audioRef.current) {
         audioRef.current.pause();
-        setCurrentTime(audioRef.current.duration || duration);
       }
-      setError("Please select the next song to play");
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
       if (isMediaSessionSupported) {
         navigator.mediaSession.playbackState = "paused";
+        navigator.mediaSession.metadata = null;
       }
     }
   };
