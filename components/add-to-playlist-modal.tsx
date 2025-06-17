@@ -171,7 +171,7 @@ export function AddToPlaylistModal({
           <Button
             onClick={handleAddToPlaylist}
             disabled={!selectedPlaylistId || isLoading}
-            className={`inline-flex items-center justify-center relative overflow-hidden text-white px-3 py-1 text-xs sm:text-sm transition-transform duration-300 transform group ${
+            className={`w-full inline-flex items-center justify-center relative overflow-hidden text-white px-3 py-1 text-xs sm:text-sm transition-transform duration-300 transform group ${
               selectedPlaylistId && !isLoading
                 ? "bg-[#ff6700] hover:bg-[#cc5300] hover:scale-105"
                 : "bg-gray-600 cursor-not-allowed"

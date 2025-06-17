@@ -158,14 +158,14 @@ export function PlaylistModal({
               setTitle("");
               setError(null);
             }}
-            className="w-auto px-3 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-xs py-1"
+            className="px-2 text-[#ff6700] hover:bg-[#ff6700] hover:text-white text-xs py-1"
           >
             Cancel
           </Button>
           <Button
             onClick={handleCreatePlaylist}
             disabled={isLoading}
-            className="relative overflow-hidden w-auto px-3 bg-[#ff6700] hover:bg-[#cc5300] text-white border-none py-1 text-xs transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center"
+            className="relative overflow-hidden px-2 bg-[#ff6700] hover:bg-[#cc5300] text-white border-none py-1 text-xs transition-transform duration-300 transform group hover:scale-105 flex items-center justify-center"
           >
             {isLoading ? "Creating..." : "Create"}
             <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-200 ease-in-out" />

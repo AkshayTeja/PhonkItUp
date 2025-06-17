@@ -306,26 +306,11 @@ export default function PlaylistPage({
                     {playlist.tracks.length} tracks
                   </p>
                   <div>
-                    <div className="flex gap-4">
+                    <div className="flex flex-col gap-4 justify-start items-start sm:items-start">
                       {playlist.user_id === currentUserId && (
                         <>
                           {playlist.title === "Liked Songs" ? (
-                            <Button
-                              className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                              onClick={() => handleNavigation("/vault")}
-                            >
-                              <Heart className="mr-1 h-4 w-4" /> Add More
-                              <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                            </Button>
-                          ) : (
-                            <>
-                              <Button
-                                className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                                onClick={() => setIsRenameDialogOpen(true)}
-                              >
-                                <Edit2 className="mr-1 h-4 w-4" /> Rename
-                                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                              </Button>
+                            <div className="flex gap-4 justify-start items-start flex-wrap">
                               <Button
                                 className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
                                 onClick={() => handleNavigation("/vault")}
@@ -333,15 +318,36 @@ export default function PlaylistPage({
                                 <Heart className="mr-1 h-4 w-4" /> Add More
                                 <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
                               </Button>
-                              <Button
-                                variant="destructive"
-                                className="relative overflow-hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
-                                onClick={handleDeletePlaylist}
-                              >
-                                <Trash2 className="mr-1 h-4 w-4" /> Delete
-                                Playlist
-                                <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
-                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex gap-4 justify-start items-start">
+                                <Button
+                                  className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                                  onClick={() => setIsRenameDialogOpen(true)}
+                                >
+                                  <Edit2 className="mr-1 h-4 w-4" /> Rename
+                                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                                </Button>
+                                <Button
+                                  className="relative overflow-hidden bg-[#ff6700] hover:bg-[#cc5300] text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md"
+                                  onClick={() => handleNavigation("/vault")}
+                                >
+                                  <Heart className="mr-1 h-4 w-4" /> Add More
+                                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                                </Button>
+                              </div>
+                              <div className="flex justify-start items-start w-full">
+                                <Button
+                                  variant="destructive"
+                                  className="relative overflow-hidden bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm transition-transform duration-300 transform group hover:scale-105 inline-flex items-center rounded-md w-full"
+                                  onClick={handleDeletePlaylist}
+                                >
+                                  <Trash2 className="mr-1 h-4 w-4" /> Delete
+                                  Playlist
+                                  <span className="absolute left-[-75%] top-0 w-1/2 h-full bg-white opacity-20 transform skew-x-[-20deg] group-hover:left-[125%] transition-all duration-700 ease-in-out" />
+                                </Button>
+                              </div>
                             </>
                           )}
                         </>
