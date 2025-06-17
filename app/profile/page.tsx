@@ -172,11 +172,9 @@ export default function ProfilePage() {
         console.log("Authenticated user:", { id: user.id, email: user.email });
 
         setUserId(user.id);
-        const fullName = user.user_metadata?.full_name || "New User";
         const displayName =
           user.user_metadata?.display_name || `user_${user.id.slice(0, 8)}`;
         setUsername(displayName);
-        setName(fullName);
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -191,30 +189,32 @@ export default function ProfilePage() {
 
         if (profile) {
           console.log("Profile data:", profile);
-          setName(
-            fullName !== "New User" ? fullName : profile.name || fullName
-          );
+          setName(profile.name || "New User"); // Use profile.name, fallback to "New User"
           setProfilePic(profile.profile_picture || "/profilepic.jpg");
           setWallpaper(profile.wallpaper || "/profilewallpaper.jpg");
         } else {
           console.log("No profile data found for user:", user.id);
+          setName("New User"); // Fallback if no profile exists
+          setProfilePic("/profilepic.jpg");
+          setWallpaper("/profilewallpaper.jpg");
         }
 
+        // ... (rest of the function for liked songs, recently played, playlists remains unchanged)
         const { data: liked, error: likedError } = await supabase
           .from("liked_songs")
           .select(
             `
-            track_id,
-            phonk_songs (
-              id,
-              song_name,
-              song_artist,
-              album_cover_url,
-              track_url,
-              song_popularity,
-              song_duration
-            )
-          `
+        track_id,
+        phonk_songs (
+          id,
+          song_name,
+          song_artist,
+          album_cover_url,
+          track_url,
+          song_popularity,
+          song_duration
+        )
+      `
           )
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
@@ -244,18 +244,18 @@ export default function ProfilePage() {
           .from("recently_played")
           .select(
             `
-            track_id,
-            played_at,
-            phonk_songs (
-              id,
-              song_name,
-              song_artist,
-              album_cover_url,
-              track_url,
-              song_popularity,
-              song_duration
-            )
-          `
+        track_id,
+        played_at,
+        phonk_songs (
+          id,
+          song_name,
+          song_artist,
+          album_cover_url,
+          track_url,
+          song_popularity,
+          song_duration
+        )
+      `
           )
           .eq("user_id", user.id)
           .order("played_at", { ascending: false })
@@ -293,7 +293,6 @@ export default function ProfilePage() {
         setErrorMessage("Failed to load user data. Please try again.");
       }
     };
-
     fetchUserData();
   }, [router]);
 
@@ -375,7 +374,10 @@ export default function ProfilePage() {
     try {
       if (!userId) throw new Error("No user ID found");
 
+      // Validate inputs
       if (!username.trim()) throw new Error("Username cannot be empty");
+      if (name.trim().length > 255)
+        throw new Error("Name must be less than 255 characters");
       if (profilePicFile && profilePicFile.size > 5 * 1024 * 1024) {
         throw new Error("Profile picture must be less than 5MB");
       }
@@ -383,23 +385,27 @@ export default function ProfilePage() {
         throw new Error("Wallpaper must be less than 10MB");
       }
 
+      // Prepare updates for the profiles table
       const updates: { [key: string]: any } = {
-        name: name.trim() || null,
-        updated_at: new Date().toISOString(),
+        id: userId, // Explicitly include id for clarity
+        name: name.trim() || null, // Allow null as per schema
+        updated_at: new Date().toISOString(), // Optional, as schema defaults to now()
       };
 
+      // Update display_name in Supabase auth if changed
       const {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
       if (authError) throw new Error(`Auth fetch error: ${authError.message}`);
-      if (username !== user?.user_metadata?.display_name) {
+      if (user && username !== user.user_metadata?.display_name) {
         const { error } = await supabase.auth.updateUser({
           data: { display_name: username.trim() },
         });
         if (error) throw new Error(`Auth update error: ${error.message}`);
       }
 
+      // Handle profile picture upload
       if (profilePicFile) {
         const fileExt = profilePicFile.name.split(".").pop()?.toLowerCase();
         if (!["jpg", "jpeg", "png", "gif"].includes(fileExt || "")) {
@@ -423,6 +429,7 @@ export default function ProfilePage() {
         setProfilePic(publicUrlData.publicUrl);
       }
 
+      // Handle wallpaper upload
       if (wallpaperFile) {
         const fileExt = wallpaperFile.name.split(".").pop()?.toLowerCase();
         if (!["jpg", "jpeg", "png", "gif"].includes(fileExt || "")) {
@@ -444,25 +451,28 @@ export default function ProfilePage() {
         setWallpaper(publicUrlData.publicUrl);
       }
 
-      const { error } = await supabase
+      // Update profiles table
+      const { data, error } = await supabase
         .from("profiles")
-        .upsert({ id: userId, ...updates }, { onConflict: "id" })
-        .eq("id", userId);
+        .upsert(updates, { onConflict: "id" });
       if (error) throw new Error(`Profile update error: ${error.message}`);
+      if (!data)
+        console.warn("Profile upsert returned no data, but no error occurred");
 
+      // Close modal and reset state
       setIsEditModalOpen(false);
       setProfilePicFile(null);
       setWallpaperFile(null);
       setErrorMessage(null);
     } catch (error: any) {
-      const message =
-        error.message ||
-        "An unexpected error occurred while updating the profile";
+      const message = error.message || "Failed to update profile";
       console.error("Error updating profile:", {
         message,
         code: error.code,
         details: error.details,
         hint: error.hint,
+        userId,
+        name: name.trim(),
       });
       setErrorMessage(message);
     }
