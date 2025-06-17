@@ -19,7 +19,7 @@ function ResetPasswordForm({ setError }) {
     const refreshToken = searchParams.get("refresh_token");
 
     if (!accessToken || !refreshToken) {
-      setError("Invalid or missing tokens");
+      setError("");
     }
   }, [searchParams, setError]);
 
