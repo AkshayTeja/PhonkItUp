@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,6 +9,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updatePassword } from "@/lib/auth";
+
+// Child component to handle useSearchParams
+function ResetPasswordForm({ setError }) {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const accessToken = searchParams.get("access_token");
+    const refreshToken = searchParams.get("refresh_token");
+
+    if (!accessToken || !refreshToken) {
+      setError("Invalid or missing tokens");
+    }
+  }, [searchParams, setError]);
+
+  return null; // This component only handles side effects
+}
 
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,17 +35,6 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    // Check if we have the required tokens from the URL
-    const accessToken = searchParams.get("access_token");
-    const refreshToken = searchParams.get("refresh_token");
-
-    if (!accessToken || !refreshToken) {
-      setError("");
-    }
-  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,7 +61,6 @@ export default function ResetPasswordPage() {
     } else {
       setSuccess(true);
       setIsLoading(false);
-      // Redirect to login after 3 seconds
       setTimeout(() => {
         router.push("/login");
       }, 3000);
@@ -152,6 +156,10 @@ export default function ResetPasswordPage() {
                 Enter your new password below.
               </p>
             </div>
+
+            <Suspense fallback={<p>Loading...</p>}>
+              <ResetPasswordForm setError={setError} />
+            </Suspense>
 
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
