@@ -4,8 +4,6 @@
 
 PhonkItUp is a full-stack web application dedicated to the world of phonk music. It allows users to create personalized accounts, stream a vast library of phonk tracks, discover globally trending songs, curate their own "Phonkits" (playlists), and personalize their listening experience through customizable profiles.
 
----
-
 ## ✨ Features
 - **User Authentication**: Secure signup, login, and password reset functionalities.
 - **Phonk Music Streaming**: Seamless playback of a diverse collection of phonk songs.
@@ -15,7 +13,7 @@ PhonkItUp is a full-stack web application dedicated to the world of phonk music.
 - **Profile Customization**: Personalize user profiles with avatars, bios, and preferred genres.
 - **Search Functionality**: Easily find songs, artists, and phonkits.
 - **Responsive Design**: Optimized for a consistent experience across desktop and mobile devices.
----
+
 
 ## 🛠️ Technologies Used
 
@@ -27,7 +25,6 @@ PhonkItUp is a full-stack web application dedicated to the world of phonk music.
 - **Supabase Database**: A PostgreSQL database that provides a robust and scalable backend for your application data.
 - **Supabase Auth**: Handles secure user authentication, including sign-up, login, and user management.
 - **Supabase Storage**: Provides scalable cloud storage for user-generated content like avatars, song files, or other assets.
----
 
 ## 📂 Project Structure
 
@@ -70,7 +67,7 @@ PhonkItUp is a full-stack web application dedicated to the world of phonk music.
 ├── README.md               # This documentation file
 └── tsconfig.json           # TypeScript configuration file
 ```
----
+
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
@@ -117,7 +114,6 @@ pnpm dev
 
 The application should now be running in your browser, typically at `http://localhost:3000`.
 
----
 
 ## 🧑‍💻 Usage
 
@@ -128,7 +124,7 @@ After launching the application:
 3. Browse the website for songs of your liking
 4. Add items to your Phonkits, play songs, customise profile and keep exploring
 
----
+
 
 
 ## 🤝 Contributing
@@ -139,7 +135,6 @@ After launching the application:
 4. Push to the branch: `git push origin feature/your-feature-name`
 5. Open a Pull Request to the main branch.
 
----
 
 
 ## 📧 Contact
