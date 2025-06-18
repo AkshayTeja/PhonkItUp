@@ -139,9 +139,11 @@ After launching the application:
 4. Push to the branch: `git push origin feature/your-feature-name`
 5. Open a Pull Request to the main branch.
 
+---
+
 
 ## 📧 Contact
 
 If you have any questions or suggestions, feel free to open an issue or contact me directly at akshayteja04@gmail.com
 
----
+
